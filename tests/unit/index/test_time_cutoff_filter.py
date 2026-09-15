@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from tests/unit/onyx/document_index/opensearch/test_time_cutoff_filter.py.
 """How time ranges become range clauses, and when undated documents survive.
 

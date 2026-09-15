@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/file_processing/extract_file_text.py.
 """Bytes in, text and embedded images out.
 

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/utils/process_isolation.py.
 """Run a callable in a throwaway child process.
 

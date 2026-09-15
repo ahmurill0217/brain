@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Ported from onyx tests/unit/onyx/indexing/test_embed_chunks_in_batches.py.
 """Tests for spilling embedded chunks to disk.
 

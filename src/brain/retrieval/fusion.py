@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/tools/tool_implementations/search/search_utils.py,
 # onyx/context/search/pipeline.py, onyx/context/search/retrieval/search_runner.py,
 # and onyx/tools/tool_implementations/search/search_tool.py.

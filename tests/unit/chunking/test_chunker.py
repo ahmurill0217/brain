@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx tests/unit/onyx/indexing/test_chunker.py.
 """The whole-document path: budget arithmetic, metadata, large chunks.
 

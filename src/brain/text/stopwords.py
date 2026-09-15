@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/natural_language_processing/english_stopwords.py.
 """English stopword list, used to build the BM25 half of a hybrid query.
 

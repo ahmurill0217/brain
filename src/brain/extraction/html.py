@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/file_processing/html_utils.py and onyx/file_processing/enums.py.
 """HTML to the flat text a chunker can read.
 

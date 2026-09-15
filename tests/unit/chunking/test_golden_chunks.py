@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """A fixed document, spelled out chunk for chunk.
 
 Chunk boundaries are part of the index format: move them and every stored

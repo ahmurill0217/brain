@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 """File bytes to a `Document`.
 
 `build_document_from_file` is the whole package for most callers. The

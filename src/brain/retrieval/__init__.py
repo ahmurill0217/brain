@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/context/search/ and
 # onyx/tools/tool_implementations/search/.
 """A query to a cited context string.

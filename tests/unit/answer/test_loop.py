@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The answer loop: search, then answer, with citations resolved mid-stream.
 
 Everything here uses a scripted model and a stub searcher, so the assertions are

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """System prompt assembly.
 
 Two things here are load-bearing. First, every placeholder has to be gone from

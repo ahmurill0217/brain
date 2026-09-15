@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/chat/prompt_utils.py and onyx/prompts/prompt_utils.py.
 """Assembling the system prompt and the per-cycle reminder.
 

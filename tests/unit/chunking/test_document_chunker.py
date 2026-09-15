@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx tests/unit/onyx/indexing/test_document_chunker.py.
 """Section-walk behavior: what becomes a chunk, and where the seams fall.
 

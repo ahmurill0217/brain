@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The HTTP surface.
 
 A stub Brain is injected, so these test the translation layer only: request

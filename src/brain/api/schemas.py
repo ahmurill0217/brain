@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """Request and response bodies for the HTTP API.
 
 Mostly thin wrappers over the domain models. The one real translation is image

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 # Shape informed by onyx/llm/interfaces.py.
 """The LLM boundary.
 

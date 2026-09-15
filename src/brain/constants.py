@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/configs/constants.py and onyx/prompts/constants.py.
 """Literal constants that are part of the on-disk / on-index format.
 

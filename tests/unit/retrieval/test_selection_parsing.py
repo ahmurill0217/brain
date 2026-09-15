@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """Parsing what the selection LLM actually returns.
 
 Both prompts ask for a bare answer and neither reliably gets one, so these tests

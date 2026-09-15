@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The search orchestration, end to end against doubles.
 
 What is worth pinning down here is the plumbing between the steps, not the

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from tests/unit/onyx/document_index/opensearch/test_document_chunk_serialization.py.
 """Dates are stored as epoch seconds, and an unset date is stored as nothing.
 

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/prompts/search_prompts.py.
 """Re-export of the retrieval prompts, so every prompt is findable from here.
 

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/llm/multi_llm.py (LitellmLLM.invoke / .stream and its
 # message-dict conversion) and onyx/llm/model_response.py.
 """The one file that knows litellm exists.

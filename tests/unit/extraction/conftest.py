@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """Fixtures for the extraction suite.
 
 `extraction_settings` pins every threshold the filters read, so a `BRAIN_`

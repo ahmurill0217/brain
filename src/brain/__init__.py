@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """brain: document ingest, hybrid retrieval, and cited answering.
 
 Everything most callers need is here:

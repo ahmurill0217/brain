@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Section assembly derived from onyx/file_processing/extract_file_text.py
 # (stage_xlsx_sheets) and onyx/file_processing/image_utils.py.
 """Bytes to a `Document`, in one call.

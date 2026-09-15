@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Semantics derived from onyx/indexing/indexing_pipeline.py (get_docs_to_update,
 # index_doc_batch_prepare) and onyx/indexing/adapters/document_indexing_adapter.py.
 """A `DocumentStore` in a dict.

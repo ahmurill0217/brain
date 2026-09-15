@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """Filter building and the choice of retrieval mode.
 
 `build_index_filters` is the security boundary: it turns "who is asking" into

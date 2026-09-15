@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/indexing/indexing_pipeline.py (IndexingPipelineResult) and
 # onyx/tools/tool_implementations/search/search_tool.py (ToolResponse).
 """What a whole ingest, search, or answer hands back.

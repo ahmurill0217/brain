@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """`python -m brain.api` — run the HTTP service."""
 
 from __future__ import annotations

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The litellm boundary, with litellm replaced by a stand-in.
 
 Two things are being tested. The first is conversion: brain's message and

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """HTTP surface.
 
 Thin by design: every endpoint translates a request body, calls one facade

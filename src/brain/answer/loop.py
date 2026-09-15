@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/chat/llm_loop.py (run_llm_loop), onyx/chat/llm_step.py
 # (run_llm_step, _update_tool_call_with_delta), and
 # onyx/tools/tool_implementations/search/search_tool.py (tool_definition).

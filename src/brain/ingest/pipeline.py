@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/indexing/indexing_pipeline.py (index_doc_batch,
 # index_doc_batch_prepare, filter_documents, get_docs_to_update,
 # _verify_indexing_completeness).

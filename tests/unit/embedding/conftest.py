@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """Fixtures for the embedding suite.
 
 The builders are handed out as fixtures rather than imported, because the test

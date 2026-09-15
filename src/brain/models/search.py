@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/context/search/models.py, onyx/context/search/utils.py, and
 # onyx/server/query_and_chat/streaming_models.py (CitationInfo).
 """Query-side models.

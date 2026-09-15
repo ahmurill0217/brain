@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/server/query_and_chat/streaming_models.py.
 """What an answer emits as it runs.
 

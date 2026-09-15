@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """Tests for the model server HTTP client.
 
 Every test answers with a callback rather than a canned response, so the

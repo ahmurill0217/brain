@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """An in-memory `DocumentIndex` for tests.
 
 A real index means a running OpenSearch. This keeps chunks in a dict, which is

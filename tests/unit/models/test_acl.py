@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """ACL parity.
 
 The write side and the read side must produce strings that match exactly, or

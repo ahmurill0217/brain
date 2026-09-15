@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/indexing/vector_db_insertion.py.
 """Write a batch of chunks to the index, isolating whichever document breaks it.
 

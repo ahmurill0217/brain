@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The exact shape of the queries brain sends.
 
 Query JSON is ranking, not plumbing: reordering the hybrid subqueries silently

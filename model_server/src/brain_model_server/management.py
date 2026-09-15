@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from model_server/management_endpoints.py.
 """Liveness and accelerator reporting."""
 

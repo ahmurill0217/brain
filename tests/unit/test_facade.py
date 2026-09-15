@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The whole pipeline in one process.
 
 This is the test that proves the packages fit together: a real chunker, a real

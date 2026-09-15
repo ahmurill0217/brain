@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The whole stack, for real.
 
 Real OpenSearch, real embeddings from the model server, real hybrid queries.

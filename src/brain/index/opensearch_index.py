@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/document_index/opensearch/opensearch_document_index.py.
 """The OpenSearch implementation of `DocumentIndex`.
 

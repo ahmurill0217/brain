@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from model_server/utils.py and model_server/constants.py.
 """Host introspection: what accelerator is there, and how much CPU may we use."""
 

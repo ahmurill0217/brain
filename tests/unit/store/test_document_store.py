@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The document store contract, run against both implementations.
 
 Every test here is about a dedupe gate or an operator edit, because those are

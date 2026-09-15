@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/tools/tool_implementations/utils.py.
 """Rendering retrieved sections as the tool result the model reads.
 

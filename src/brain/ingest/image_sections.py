@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/indexing/indexing_pipeline.py (_process_image_sections,
 # _convert_documents_without_image_summaries).
 """Give every image section some text, or an honest empty string.

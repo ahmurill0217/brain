@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from model_server/__main__.py.
 """Process entry point: `python -m brain_model_server`.
 

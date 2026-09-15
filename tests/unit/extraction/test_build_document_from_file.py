@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """`build_document_from_file`: the mapping from a file to a Document's sections.
 
 The point of each case is which section type comes out, and whether the payload

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """Query expansion, and what each half does when it cannot do its job.
 
 Onyx raises when the semantic rephrase comes back empty. brain does not: these

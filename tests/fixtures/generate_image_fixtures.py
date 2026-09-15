@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx tests/unit/onyx/file_processing/fixtures/generate_image_fixtures.py.
 """Regenerates the image-bearing PDF fixtures in this directory.
 

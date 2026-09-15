@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """End-to-end ingest against in-memory doubles.
 
 The properties worth holding onto here are the crash-safety ones, and they are

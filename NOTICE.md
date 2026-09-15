@@ -4,8 +4,11 @@ brain is MIT licensed. Substantial portions are derived from
 [Onyx](https://github.com/onyx-dot-app/onyx-foss), copyright DanswerAI, Inc.,
 also MIT licensed. Reference commit: `67355bae264628f3323c5b491b46ba5ebf0fcfd6`.
 
-Each derived module carries a header naming its Onyx source. This file is the
-index. Modules not listed are original work.
+Each derived module carries a one-line `# Derived from onyx/...` comment naming
+its source. That comment is a pointer for anyone comparing behaviour against
+upstream, not a licensing requirement: `LICENSE` at the repository root is
+what satisfies MIT, and this file is the complete map. Modules not listed are
+original work.
 
 | brain module | Onyx source |
 |---|---|

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """One object that wires the pieces together.
 
 Everything below this file takes its collaborators as arguments and constructs

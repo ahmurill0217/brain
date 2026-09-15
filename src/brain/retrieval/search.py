@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/context/search/retrieval/search_runner.py and
 # onyx/context/search/pipeline.py.
 """One query against the index.

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/indexing/embedder.py (DefaultIndexingEmbedder, embed_chunks_with_failure_handling).
 """Chunks in, chunks with vectors out.
 

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The two dedupe gates.
 
 This is why re-ingesting an unchanged corpus is nearly free, so the matrix is

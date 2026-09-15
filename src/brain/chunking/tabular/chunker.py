@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/indexing/chunking/tabular_section_chunker/tabular_section_chunker.py.
 """Tabular sections.
 

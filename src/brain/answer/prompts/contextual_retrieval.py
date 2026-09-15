@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/prompts/contextual_retrieval.py.
 """Re-export of the contextual-RAG prompts, so every prompt is findable here.
 

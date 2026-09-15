@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/natural_language_processing/search_nlp_models.py and
 # shared_configs/model_server_models.py.
 """The embedding boundary.

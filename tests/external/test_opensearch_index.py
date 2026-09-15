@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """Round-trips against a real OpenSearch.
 
 The unit tests pin the query JSON; these pin what OpenSearch does with it. They

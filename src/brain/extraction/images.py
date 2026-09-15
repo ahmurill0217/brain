@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/file_processing/image_utils.py and onyx/utils/b64.py.
 """Embedded images, carried inline.
 

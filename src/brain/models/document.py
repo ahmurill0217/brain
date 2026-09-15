@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/connectors/models.py and
 # onyx/connectors/cross_connector_utils/miscellaneous_utils.py.
 """The ingest contract.

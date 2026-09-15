@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """Shared fixtures.
 
 The tokenizer fixture matters most: a real HuggingFace tokenizer downloads from

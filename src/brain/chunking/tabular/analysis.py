@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/indexing/chunking/tabular_section_chunker/analysis.py.
 """One streaming pass that classifies a sheet's columns.
 

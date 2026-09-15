@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/tools/tool_implementations/search/search_tool.py and
 # onyx/secondary_llm_flows/document_filter.py.
 """LLM section selection: the prompts, the budgets, and the parsing.

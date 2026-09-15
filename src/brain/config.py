@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Values derived from onyx shared_configs/configs.py, onyx/configs/app_configs.py,
 # chat_configs.py, model_configs.py, opensearch/constants.py, and
 # tools/tool_implementations/search/constants.py.

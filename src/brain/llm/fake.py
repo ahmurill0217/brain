@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """A scripted LLM for tests.
 
 You give it a list of turns; it returns them in order. A turn is either text

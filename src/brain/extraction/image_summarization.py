@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/file_processing/image_summarization.py and onyx/prompts/image_analysis.py.
 """Turn an image into text a retriever can match against.
 

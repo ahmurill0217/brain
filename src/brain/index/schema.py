@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/document_index/opensearch/schema.py and
 # onyx/document_index/opensearch/string_filtering.py.
 """The OpenSearch index format.

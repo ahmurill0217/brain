@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The embedding model server: one FastAPI process wrapping one SentenceTransformer.
 
 Separate from `brain` on purpose. It is the only thing in the system that needs

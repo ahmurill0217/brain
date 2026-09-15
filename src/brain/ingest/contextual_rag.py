@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/indexing/indexing_pipeline.py (add_contextual_summaries,
 # add_document_summaries, add_chunk_summaries).
 """Index-time summaries that tell a chunk where it came from.

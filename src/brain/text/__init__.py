@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 """Text utilities shared by ingest and retrieval."""
 
 from brain.text.enrichment import (

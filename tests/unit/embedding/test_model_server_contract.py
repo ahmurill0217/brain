@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The client and the server must agree on the wire format.
 
 `brain/embedding/protocol.py` and `model_server/.../schemas.py` define the same

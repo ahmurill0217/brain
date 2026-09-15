@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """Column date detection matches Onyx exactly.
 
 Whether a spreadsheet column reads as dates changes the descriptor chunks built

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/utils/isolated_runner.py.
 """Child entry point for `run_in_isolated_process`.
 

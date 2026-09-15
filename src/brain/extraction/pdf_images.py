@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/file_processing/pdf_image_utils.py.
 """Enumeration and filtering of embedded images in PDFs.
 

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 """Shared data models.
 
 Every other package depends on this one and it depends on nothing but pydantic.

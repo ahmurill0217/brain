@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The JSON the model reads, and the citation mapping that has to match it.
 
 The `document` numbers in the payload and the keys of the returned mapping are

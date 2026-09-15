@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """Shared dependencies: the Brain instance and the optional bearer check."""
 
 from __future__ import annotations

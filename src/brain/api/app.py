@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The FastAPI application.
 
 One Brain is built at startup and reused for every request, because it owns an

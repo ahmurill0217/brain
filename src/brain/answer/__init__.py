@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 """The answer loop, its event contract, and the streaming citation processor."""
 
 from brain.answer.citation_processor import (

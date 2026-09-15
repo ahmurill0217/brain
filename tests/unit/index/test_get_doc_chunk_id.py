@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from tests/unit/onyx/document_index/opensearch/test_get_doc_chunk_id.py.
 """The chunk id is the index's primary key, so its exact shape is format.
 

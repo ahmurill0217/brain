@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """What happens to a section with no text.
 
 This is the rule that decides whether images survive indexing, and it is easy

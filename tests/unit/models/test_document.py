@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """The Document contract.
 
 `content_hash` is the interesting part: it is the second dedupe gate, so it has

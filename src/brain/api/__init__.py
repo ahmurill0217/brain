@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """HTTP service, for callers that would rather not embed brain in-process."""
 
 from brain.api.app import create_app

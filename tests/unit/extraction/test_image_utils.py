@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx tests/unit/onyx/file_processing/test_image_utils.py.
 """The image callback, which in brain returns bytes instead of a file-store id.
 

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/secondary_llm_flows/query_expansion.py.
 """Turning one user message into several searchable queries.
 

@@ -1,4 +1,3 @@
-# MIT License. Copyright (c) 2026 Angel Murillo.
 """A deterministic embedder for tests.
 
 Real vectors need a model server and ~2 GB of RAM. These are derived from a hash
