@@ -11,3 +11,6 @@ build/
 .env
 *.db
 data/
+
+# macOS
+.DS_Store
