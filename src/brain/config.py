@@ -132,6 +132,10 @@ class BrainSettings(BaseSettings):
     # Only takes effect when an LLM is configured.
     image_summarization_enabled: bool = True
     image_summarization_timeout_s: int = 300
+    # None means use the module defaults ported from Onyx. Override to steer
+    # summaries toward your own corpus (schematics, screenshots, slides).
+    image_summarization_system_prompt: str | None = None
+    image_summarization_user_prompt: str | None = None
     max_image_workers: int = 16
     max_embedded_images_per_file: int = 500
     min_embedded_image_dimension_px: int = 16

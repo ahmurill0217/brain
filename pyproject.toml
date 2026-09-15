@@ -16,6 +16,9 @@ dependencies = [
     "requests==2.33.0",
     "tenacity==9.1.2",
     "sqlalchemy>=2.0.50",
+    # Used only by the tabular column analyzer, to match Onyx's date detection
+    # exactly. Already present transitively via opensearch-py.
+    "python-dateutil==2.9.0.post0",
 ]
 
 [project.optional-dependencies]
@@ -60,6 +63,10 @@ members = ["model_server"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Put the repo root on sys.path so test modules can share helpers via
+# `from tests.conftest import ...`. Without it, pytest only adds each test
+# directory and that import fails at collection time.
+pythonpath = ["."]
 markers = [
     "external: needs a running OpenSearch and/or model server",
     "e2e: needs the full docker compose stack",
