@@ -87,6 +87,22 @@ class ModelServerEmbedder(Embedder):
             )
         return self._tokenizer
 
+    def healthy(self) -> bool:
+        """Whether the model server answers.
+
+        For the API's health endpoint. Deliberately swallows everything and
+        returns False: a health check that raises tells an orchestrator less
+        than one that reports a dependency as down.
+        """
+        try:
+            response = requests.get(
+                f"{self._settings.model_server_url}/api/health",
+                timeout=self._settings.model_server_connect_timeout_s,
+            )
+            return response.ok
+        except Exception:
+            return False
+
     def embed(
         self,
         texts: list[str],

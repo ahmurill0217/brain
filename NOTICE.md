@@ -16,6 +16,7 @@ index. Modules not listed are original work.
 | `models/chunks.py` | `onyx/indexing/models.py` |
 | `models/search.py` | `onyx/context/search/models.py`, `onyx/context/search/utils.py`, `onyx/server/query_and_chat/streaming_models.py` |
 | `models/llm.py` | `onyx/llm/models.py`, `onyx/llm/model_response.py` |
+| `models/results.py` | `IndexingPipelineResult` from `onyx/indexing/indexing_pipeline.py`, `ToolResponse` from `onyx/tools/tool_implementations/search/search_tool.py` |
 | `text/processing.py` | `onyx/utils/text_processing.py` |
 | `text/tokenizer.py` | `onyx/natural_language_processing/utils.py` |
 | `text/stopwords.py` | `onyx/natural_language_processing/english_stopwords.py` |
@@ -56,17 +57,26 @@ index. Modules not listed are original work.
 | `index/queries.py` | `onyx/document_index/opensearch/search.py` |
 | `index/client.py` | `onyx/document_index/opensearch/client.py`, `onyx/document_index/opensearch/cluster_settings.py` |
 | `index/opensearch_index.py` | `onyx/document_index/opensearch/opensearch_document_index.py` |
+| `ingest/pipeline.py` | `onyx/indexing/indexing_pipeline.py` (`index_doc_batch`, `index_doc_batch_prepare`, `filter_documents`, `get_docs_to_update`, `_verify_indexing_completeness`) |
+| `ingest/image_sections.py` | `onyx/indexing/indexing_pipeline.py` (`_process_image_sections`, `_convert_documents_without_image_summaries`) |
+| `ingest/contextual_rag.py` | `onyx/indexing/indexing_pipeline.py` (`add_contextual_summaries`, `add_document_summaries`, `add_chunk_summaries`) |
+| `ingest/vector_write.py` | `onyx/indexing/vector_db_insertion.py` |
+| `ingest/prompts.py` | `onyx/prompts/contextual_retrieval.py` |
 | `retrieval/fusion.py` | `onyx/tools/tool_implementations/search/search_utils.py`, `onyx/context/search/pipeline.py`, `onyx/context/search/retrieval/search_runner.py`, `onyx/tools/tool_implementations/search/search_tool.py` |
 | `retrieval/context.py` | `onyx/tools/tool_implementations/utils.py` |
-| `retrieval/selection.py` | `onyx/secondary_llm_flows/document_filter.py`, `onyx/tools/tool_implementations/search/search_tool.py` |
+| `retrieval/selection.py` | `onyx/secondary_llm_flows/document_filter.py`, `onyx/tools/tool_implementations/search/search_tool.py`, `onyx/tools/tool_implementations/search/search_utils.py` |
+| `retrieval/search.py` | `onyx/context/search/retrieval/search_runner.py`, `onyx/context/search/pipeline.py` |
+| `retrieval/query_expansion.py` | `onyx/secondary_llm_flows/query_expansion.py` |
+| `retrieval/searcher.py` | `onyx/tools/tool_implementations/search/search_tool.py` (`run`), `onyx/context/search/pipeline.py` |
+| `retrieval/prompts.py` | `onyx/prompts/search_prompts.py` |
 | `answer/citation_processor.py` | `onyx/chat/citation_processor.py` |
 | `answer/citation_utils.py` | `onyx/chat/citation_utils.py` |
 | `answer/system_prompt.py` | `onyx/chat/prompt_utils.py`, `onyx/prompts/prompt_utils.py` |
 | `answer/prompts/constants.py` | `onyx/prompts/constants.py` |
 | `answer/prompts/chat_prompts.py` | `onyx/prompts/chat_prompts.py` |
 | `answer/prompts/tool_prompts.py` | `onyx/prompts/tool_prompts.py` |
-| `answer/prompts/search_prompts.py` | `onyx/prompts/search_prompts.py` |
-| `answer/prompts/contextual_retrieval.py` | `onyx/prompts/contextual_retrieval.py` |
+| `answer/prompts/search_prompts.py` | re-exports `retrieval/prompts.py` |
+| `answer/prompts/contextual_retrieval.py` | re-exports `ingest/prompts.py` |
 
 The PDF fixtures in `tests/fixtures/`, their generator, and the extraction test
 modules in `tests/unit/extraction/` are derived from Onyx's

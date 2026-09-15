@@ -1,24 +1,49 @@
 # MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
 # Derived from onyx/tools/tool_implementations/search/search_tool.py and
 # onyx/secondary_llm_flows/document_filter.py.
-"""Token budgeting and response parsing for LLM section selection.
+"""LLM section selection: the prompts, the budgets, and the parsing.
 
-The LLM calls themselves live elsewhere; what is here is the two halves that
-have to be right regardless of which model is asked.
+Retrieval hands back more sections than an answer can use. Two model calls cut
+that down, and each one has a pure half and a call half:
+
+  select   which of the retrieved sections are worth keeping at all
+  expand   for a kept section, how much of its document to pull in around it
 
 The parsers are deliberately forgiving. Both prompts ask for a bare answer, and
 both get prose anyway — "Sections: [3, 1]", "I would choose 2", a reasoning model
 narrating first. Failing on that would throw away a whole retrieval round, so the
 parsers dig the answer out and let the caller decide what an empty result means.
+
+Every model call here degrades rather than raises, and each one degrades toward
+what retrieval already decided: the top-ranked sections, unexpanded. These are
+refinements on a working search, so none of them is worth failing a search over.
 """
 
 from __future__ import annotations
 
+import json
+import logging
 import re
 from collections.abc import Callable
 
 from brain.config import BrainSettings
-from brain.models.search import ContextExpansionType, InferenceChunk, InferenceSection
+from brain.index.interface import DocumentIndex, DocumentSectionRequest
+from brain.llm.protocol import LLM
+from brain.models.llm import ReasoningEffort, UserMessage
+from brain.models.search import (
+    ContextExpansionType,
+    IndexFilters,
+    InferenceChunk,
+    InferenceSection,
+    inference_section_from_chunks,
+)
+from brain.retrieval.prompts import (
+    DOCUMENT_CONTEXT_SELECTION_PROMPT,
+    DOCUMENT_SELECTION_PROMPT,
+    TRY_TO_FILL_TO_MAX_INSTRUCTIONS,
+)
+
+logger = logging.getLogger(__name__)
 
 # Maps the number the model writes to what it means. Kept next to the parser
 # because it has to match DOCUMENT_CONTEXT_SELECTION_PROMPT exactly.
@@ -228,3 +253,269 @@ def parse_context_classification(llm_response: str) -> ContextExpansionType:
         return _DEFAULT_EXPANSION
 
     return _SITUATION_TO_EXPANSION.get(int(numbers[-1]), _DEFAULT_EXPANSION)
+
+
+def _format_sections_for_selection(
+    sections: list[InferenceSection],
+    max_chunks_per_section: int | None,
+) -> str:
+    """Render the candidate sections as the JSON the selection prompt shows.
+
+    JSON rather than prose because `section_id` is the number the model writes
+    back and it must be unmistakable. Only a few chunks per section are included:
+    one document with many matching sections would otherwise fill the prompt with
+    its own text and crowd out every other candidate.
+    """
+    formatted: list[dict[str, object]] = []
+
+    for idx, section in enumerate(sections):
+        chunk = section.center_chunk
+
+        # One "authors" list: the primary/secondary split is an indexing detail
+        # the model has no use for.
+        authors: list[str] | None = None
+        if chunk.primary_owners or chunk.secondary_owners:
+            authors = [*(chunk.primary_owners or []), *(chunk.secondary_owners or [])]
+
+        if max_chunks_per_section is not None:
+            selected_chunks = select_chunks_for_relevance(section, max_chunks_per_section)
+            content = " ".join(c.content for c in selected_chunks)
+        else:
+            content = section.combined_content
+
+        entry: dict[str, object] = {"section_id": idx, "title": chunk.semantic_identifier}
+        if chunk.updated_at is not None:
+            entry["updated_at"] = chunk.updated_at.isoformat()
+        if authors is not None:
+            entry["authors"] = authors
+        entry["source_type"] = chunk.source_type
+        # A string, so arbitrary document metadata keys cannot be mistaken for
+        # fields of the schema above.
+        entry["metadata"] = json.dumps(chunk.metadata, ensure_ascii=False)
+        entry["content"] = content
+        formatted.append(entry)
+
+    return json.dumps(formatted, indent=2, ensure_ascii=False)
+
+
+def select_sections_for_expansion(
+    sections: list[InferenceSection],
+    user_query: str,
+    llm: LLM,
+    *,
+    settings: BrainSettings,
+    max_sections: int | None = None,
+    max_chunks_per_section: int | None = None,
+    try_to_fill_to_max: bool = False,
+) -> tuple[list[InferenceSection], list[str]]:
+    """Ask the model which retrieved sections are worth keeping.
+
+    Every failure path returns the leading sections rather than nothing: the
+    retrieval ranking is already a decent answer, and an empty context because a
+    secondary model timed out is much worse than a slightly noisy one.
+
+    Returns:
+        (selected sections, document ids the model marked with "!"). A marked
+        document is one it considers so clearly the answer that the caller
+        should expand it in full without asking again.
+    """
+    if not sections:
+        return [], []
+
+    max_sections = max_sections if max_sections is not None else settings.max_selected_sections
+    if max_chunks_per_section is None:
+        max_chunks_per_section = settings.max_chunks_for_relevance
+
+    prompt = DOCUMENT_SELECTION_PROMPT.format(
+        max_sections=max_sections,
+        extra_instructions=TRY_TO_FILL_TO_MAX_INSTRUCTIONS if try_to_fill_to_max else "",
+        formatted_doc_sections=_format_sections_for_selection(sections, max_chunks_per_section),
+        user_query=user_query,
+    )
+
+    try:
+        response = llm.invoke(
+            UserMessage(content=prompt),
+            reasoning_effort=ReasoningEffort.OFF,
+            timeout=settings.secondary_llm_flow_timeout_s,
+        )
+    except Exception:
+        logger.exception("Section selection failed; keeping the top-ranked sections.")
+        return sections[:max_sections], []
+
+    selected_indices, marked_indices = parse_section_selection(response.content, len(sections))
+    if not selected_indices:
+        logger.warning(
+            "Could not parse a section selection from the model; keeping the top-ranked sections."
+        )
+        return sections[:max_sections], []
+
+    selected_indices = selected_indices[:max_sections]
+    selected = [sections[i] for i in selected_indices]
+
+    marked_document_ids: list[str] = []
+    for i in selected_indices:
+        document_id = sections[i].center_chunk.document_id
+        if i in marked_indices and document_id not in marked_document_ids:
+            marked_document_ids.append(document_id)
+
+    return selected, marked_document_ids
+
+
+def classify_section_relevance(
+    document_title: str,
+    section_text: str,
+    user_query: str,
+    llm: LLM,
+    section_above_text: str | None,
+    section_below_text: str | None,
+    *,
+    settings: BrainSettings,
+) -> ContextExpansionType:
+    """Decide how much of a document to pull in around a section.
+
+    Any failure — a raised call, an empty response, an unparseable one — lands
+    on MAIN_SECTION_ONLY, which keeps exactly what was retrieved. That is the
+    only answer that neither drops evidence nor invents it.
+    """
+    prompt = DOCUMENT_CONTEXT_SELECTION_PROMPT.format(
+        document_title=document_title,
+        main_section=section_text,
+        section_above=section_above_text or "N/A",
+        section_below=section_below_text or "N/A",
+        user_query=user_query,
+    )
+
+    try:
+        response = llm.invoke(
+            UserMessage(content=prompt),
+            reasoning_effort=ReasoningEffort.OFF,
+            timeout=settings.secondary_llm_flow_timeout_s,
+        )
+        classification = parse_context_classification(response.content)
+    except Exception:
+        logger.exception("Section relevance classification failed; keeping the main section.")
+        classification = _DEFAULT_EXPANSION
+
+    # Nothing to expand into. Asking for adjacent sections or the whole document
+    # would send the caller off to fetch chunks that are not there.
+    if (
+        not section_above_text
+        and not section_below_text
+        and classification is not ContextExpansionType.NOT_RELEVANT
+    ):
+        return _DEFAULT_EXPANSION
+
+    return classification
+
+
+def _retrieve_adjacent_chunks(
+    section: InferenceSection,
+    index: DocumentIndex,
+    num_chunks_above: int,
+    num_chunks_below: int,
+) -> tuple[list[InferenceChunk], list[InferenceChunk]]:
+    """Fetch the chunks on either side of a section, in document order.
+
+    ACL filtering is off: reaching this point means the section already passed
+    the access check, and its neighbours are the same document. A failed fetch
+    yields nothing rather than raising — context around a hit is a nicety, and
+    losing it should not lose the hit.
+    """
+    document_id = section.center_chunk.document_id
+    chunk_ids = [chunk.chunk_id for chunk in section.chunks]
+    min_chunk_id = min(chunk_ids)
+    max_chunk_id = max(chunk_ids)
+
+    filters = IndexFilters(access_control_list=None)
+
+    def _fetch(min_ind: int, max_ind: int) -> list[InferenceChunk]:
+        try:
+            chunks = index.id_based_retrieval(
+                [
+                    DocumentSectionRequest(
+                        document_id=document_id,
+                        min_chunk_ind=min_ind,
+                        max_chunk_ind=max_ind,
+                    )
+                ],
+                filters,
+            )
+        except Exception:
+            logger.warning(
+                "Could not fetch chunks %s-%s of document '%s'",
+                min_ind,
+                max_ind,
+                document_id,
+                exc_info=True,
+            )
+            return []
+        return sorted(chunks, key=lambda c: c.chunk_id)
+
+    chunks_above: list[InferenceChunk] = []
+    if num_chunks_above > 0 and min_chunk_id > 0:
+        chunks_above = _fetch(max(0, min_chunk_id - num_chunks_above), min_chunk_id - 1)
+
+    chunks_below: list[InferenceChunk] = []
+    if num_chunks_below > 0:
+        chunks_below = _fetch(max_chunk_id + 1, max_chunk_id + num_chunks_below)
+
+    return chunks_above, chunks_below
+
+
+def expand_section_with_context(
+    section: InferenceSection,
+    user_query: str,
+    llm: LLM,
+    index: DocumentIndex,
+    *,
+    settings: BrainSettings,
+    expand_override: bool = False,
+) -> InferenceSection:
+    """Widen a section to as much of its document as the query needs.
+
+    The two chunks fetched to show the classifier what surrounds the section are
+    the same two handed back when it answers INCLUDE_ADJACENT_SECTIONS, so the
+    common expansion costs no extra round trip.
+
+    `expand_override` skips the classification entirely and expands in full. It
+    is for a document the selection step already marked as the answer: asking a
+    second model call to confirm would only give it a chance to disagree.
+
+    A NOT_RELEVANT section is returned unchanged rather than dropped. The
+    classifier sees one section in isolation and cannot know what else was
+    retrieved, so it is trusted to decide how much context to add and not
+    trusted to overrule the ranking.
+    """
+    chunks_above: list[InferenceChunk] = []
+    chunks_below: list[InferenceChunk] = []
+
+    if expand_override:
+        classification = ContextExpansionType.FULL_DOCUMENT
+    else:
+        chunks_above, chunks_below = _retrieve_adjacent_chunks(section, index, 2, 2)
+        classification = classify_section_relevance(
+            document_title=section.center_chunk.semantic_identifier,
+            section_text=section.combined_content,
+            user_query=user_query,
+            llm=llm,
+            section_above_text=" ".join(c.content for c in chunks_above) or None,
+            section_below_text=" ".join(c.content for c in chunks_below) or None,
+            settings=settings,
+        )
+
+    if classification in (
+        ContextExpansionType.NOT_RELEVANT,
+        ContextExpansionType.MAIN_SECTION_ONLY,
+    ):
+        return section
+
+    if classification is ContextExpansionType.FULL_DOCUMENT:
+        around = settings.full_doc_num_chunks_around
+        chunks_above, chunks_below = _retrieve_adjacent_chunks(section, index, around, around)
+
+    all_chunks = chunks_above + section.chunks + chunks_below
+    expanded = inference_section_from_chunks(
+        center_chunk=section.center_chunk, chunks=all_chunks
+    )
+    return expanded or section
