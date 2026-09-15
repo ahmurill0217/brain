@@ -136,8 +136,16 @@ class IndexingMetadata(BaseModel):
 
 
 class DocumentInsertionRecord(BaseModel):
+    """One document written to the index, and whether it was already there.
+
+    Frozen so a batch's records can be collected into a set: the index writes
+    per document but reports per batch, and duplicates are meaningless.
+    """
+
     document_id: str
     already_existed: bool
+
+    model_config = {"frozen": True}
 
 
 class MultipassConfig(BaseModel):

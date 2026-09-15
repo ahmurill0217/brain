@@ -52,6 +52,10 @@ index. Modules not listed are original work.
 | `store/memory.py` | semantics from `onyx/indexing/indexing_pipeline.py`, `onyx/indexing/adapters/document_indexing_adapter.py` |
 | `store/sqlite.py` | semantics from `onyx/indexing/indexing_pipeline.py`, `onyx/db/document.py`, `onyx/indexing/adapters/document_indexing_adapter.py` |
 | `index/interface.py` | `onyx/document_index/interfaces_new.py` |
+| `index/schema.py` | `onyx/document_index/opensearch/schema.py`, `onyx/document_index/opensearch/string_filtering.py`, `onyx/utils/datetime.py` |
+| `index/queries.py` | `onyx/document_index/opensearch/search.py` |
+| `index/client.py` | `onyx/document_index/opensearch/client.py`, `onyx/document_index/opensearch/cluster_settings.py` |
+| `index/opensearch_index.py` | `onyx/document_index/opensearch/opensearch_document_index.py` |
 | `retrieval/fusion.py` | `onyx/tools/tool_implementations/search/search_utils.py`, `onyx/context/search/pipeline.py`, `onyx/context/search/retrieval/search_runner.py`, `onyx/tools/tool_implementations/search/search_tool.py` |
 | `retrieval/context.py` | `onyx/tools/tool_implementations/utils.py` |
 | `retrieval/selection.py` | `onyx/secondary_llm_flows/document_filter.py`, `onyx/tools/tool_implementations/search/search_tool.py` |
@@ -72,6 +76,10 @@ modules in `tests/unit/extraction/` are derived from Onyx's
 ported from Onyx's `backend/tests/unit/onyx/chat/`, and
 `tests/unit/retrieval/test_fusion.py` from its
 `backend/tests/unit/onyx/tools/test_search_utils.py`.
+
+`tests/unit/index/test_get_doc_chunk_id.py`,
+`test_document_chunk_serialization.py` and `test_time_cutoff_filter.py` are
+ported from Onyx's `backend/tests/unit/onyx/document_index/opensearch/`.
 
 The model server is a separate distribution under `model_server/`, derived from
 Onyx's own `backend/model_server/`.

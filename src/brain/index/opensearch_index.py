@@ -242,7 +242,7 @@ class OpenSearchDocumentIndex:
         self,
         chunks: list[IndexableChunk],
         indexing_metadata: IndexingMetadata,
-    ) -> list[DocumentInsertionRecord]:
+    ) -> set[DocumentInsertionRecord]:
         """Write chunks, replacing whatever their documents had before.
 
         Chunks are buffered per document id and flushed when the id changes or
@@ -250,11 +250,6 @@ class OpenSearchDocumentIndex:
         thousands of chunks does not become one enormous bulk request. A
         document's chunks are assumed to arrive contiguously, which is what the
         pipeline produces.
-
-        NOTE: returns a list, not the `set` the Protocol declares.
-        `DocumentInsertionRecord` is not frozen and therefore not hashable, so a
-        set of them cannot be built. One record per document is produced either
-        way; making the model frozen would let this match the Protocol exactly.
         """
         logger.debug(
             "Indexing %s chunks from %s documents for index %s.",
@@ -324,7 +319,7 @@ class OpenSearchDocumentIndex:
         if current_chunks:
             _flush_chunks(current_chunks)
 
-        return document_indexing_results
+        return set(document_indexing_results)
 
     def delete(self, document_id: str) -> int:
         """Remove every chunk of a document, hidden ones included."""
