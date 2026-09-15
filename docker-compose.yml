@@ -55,13 +55,8 @@ services:
       # The image already carries the weights; this only preserves anything
       # downloaded later, and lets a rebuild reuse the cache.
       - model-cache:/app/.cache/huggingface
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9000/api/health || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 20
-      # Loading the embedding model onto CPU takes a while on first boot.
-      start_period: 180s
+    # No healthcheck override: the image defines its own, and it probes with
+    # Python rather than curl, which this image deliberately does not carry.
 
   brain-api:
     build:
@@ -94,12 +89,7 @@ services:
         condition: service_healthy
       model_server:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8100/v1/health || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
+    # The image defines its own healthcheck; see Dockerfile.
 
 volumes:
   opensearch-data:
