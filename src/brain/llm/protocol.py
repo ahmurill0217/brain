@@ -4,10 +4,10 @@ Everything in brain that talks to a model talks to this Protocol. It is two
 methods over OpenAI-shaped messages, which is the narrowest surface that still
 supports tool calling and streaming.
 
-This is deliberately small so a provider swap is one new file. `LiteLLMAdapter`
-is the default because it reaches Vertex, Anthropic, and OpenAI through one
-call; a `GoogleGenAIAdapter` implementing the same two methods would drop in
-without touching the answer loop, the search tool, or anything else.
+This is deliberately small so a provider swap is one new file. The real
+implementation is `VertexGeminiLLM` in `brain.llm.vertex`; `FakeLLM` stands in
+for it in tests. Neither the answer loop nor the retrieval flows know which one
+they are holding.
 """
 
 from __future__ import annotations

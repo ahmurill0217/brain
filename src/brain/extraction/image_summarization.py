@@ -168,7 +168,7 @@ def _summarize_image(
         if len(str_e) > 512:
             str_e = str_e[:512] + "... (truncated)"
         parts = [f"Summarization failed: {type(e).__name__}: {str_e}"]
-        for label in ("status_code", "llm_provider", "model"):
+        for label in ("status_code", "model"):
             value = getattr(e, label, None)
             if value is not None:
                 parts.append(f"{label}={value}")

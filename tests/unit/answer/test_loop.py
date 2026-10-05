@@ -22,7 +22,7 @@ from brain.answer.loop import AnswerLoop
 from brain.config import BrainSettings
 from brain.llm.fake import FakeLLM, ScriptedText, ScriptedToolCall
 from brain.models.acl import AccessScope
-from brain.models.llm import ToolChoiceOption
+from brain.models.llm import AssistantMessage, ToolChoiceOption
 from brain.models.results import AnswerOptions, SearchOptions, SearchResult
 from brain.models.search import SearchDoc
 
@@ -165,14 +165,18 @@ def test_the_model_can_answer_without_searching(settings: BrainSettings) -> None
     assert "".join(e.text for e in events if isinstance(e, AnswerDelta)) == "No lookup needed."
 
 
-def test_force_search_requires_the_tool_on_the_first_cycle(settings: BrainSettings) -> None:
+@pytest.mark.parametrize(
+    "options", [None, AnswerOptions(force_search=True)], ids=["default", "explicit"]
+)
+def test_force_search_requires_the_tool_on_the_first_cycle(
+    settings: BrainSettings, options: AnswerOptions | None
+) -> None:
+    """On by default: an answer from brain should come from the documents."""
     llm = _search_then_answer()
-    list(
-        AnswerLoop(StubSearcher(), llm, settings).run(
-            "q", access=AccessScope(), options=AnswerOptions(force_search=True)
-        )
-    )
+    list(AnswerLoop(StubSearcher(), llm, settings).run("q", access=AccessScope(), options=options))
+
     assert llm.calls[0]["tool_choice"] == ToolChoiceOption.REQUIRED
+    assert llm.calls[1]["tool_choice"] == ToolChoiceOption.AUTO
 
 
 def test_the_last_cycle_offers_no_tools(settings: BrainSettings) -> None:
@@ -238,3 +242,42 @@ def test_retrieved_documents_are_announced_for_the_ui(settings: BrainSettings) -
 
     announced = [e for e in events if isinstance(e, SearchDocuments)]
     assert announced and len(announced[0].documents) == 2
+
+
+def test_a_tool_calls_thought_signature_is_replayed_with_it(settings: BrainSettings) -> None:
+    """Gemini rejects a replayed function call that has lost its signature, so
+    the signature has to survive fragment stitching into the next request."""
+    llm = FakeLLM(
+        turns=[
+            ScriptedToolCall(
+                name="internal_search",
+                arguments={"queries": ["pricing"]},
+                call_id="c1",
+                thought_signature="sig-1",
+            ),
+            ScriptedText(text="Answer [1]."),
+        ]
+    )
+
+    list(AnswerLoop(StubSearcher(), llm, settings).run("q", access=AccessScope()))
+
+    replayed = [
+        call
+        for message in llm.calls[1]["messages"]
+        if isinstance(message, AssistantMessage)
+        for call in message.tool_calls or []
+    ]
+    assert [(c.id, c.thought_signature) for c in replayed] == [("c1", "sig-1")]
+
+
+def test_reminders_reach_the_model_inside_system_reminder_tags(settings: BrainSettings) -> None:
+    """The system prompt tells the model reminders are tagged and are not the
+    user speaking; an untagged one gets repeated back as if it were."""
+    llm = _search_then_answer()
+
+    list(AnswerLoop(StubSearcher(), llm, settings).run("q", access=AccessScope()))
+
+    last = llm.calls[1]["messages"][-1]
+    assert isinstance(last.content, str)
+    assert last.content.startswith("<system-reminder>\n")
+    assert last.content.endswith("\n</system-reminder>")

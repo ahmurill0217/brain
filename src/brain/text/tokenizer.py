@@ -1,25 +1,19 @@
 """Tokenization.
 
-Two tokenizers, used for different jobs:
+Everything is measured with tiktoken. Chunk sizes are meant in the embedding
+model's tokens, but Gemini's tokenizer is not published, so cl100k_base stands
+in for it. The two disagree by a few percent on English, which is harmless
+here: chunks are 512 tokens and the model accepts 2048, and the per-request
+embedding budget leaves room for the error.
 
-  HuggingFaceTokenizer  the embedding model's own tokenizer. Chunk boundaries
-                        must be measured with this or chunks overflow the
-                        model's 512-token window and get silently truncated.
-  TiktokenTokenizer     approximate counting for LLM context budgets, where
-                        being a few percent off costs nothing.
-
-Loading the HF tokenizer can hit the network. `local_path` and the HF cache make
-an offline container possible; see the Dockerfile.
+tiktoken downloads its encoding file the first time it is used. The Dockerfile
+bakes it in so a container starts without reaching the network.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 from abc import ABC, abstractmethod
-
-os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
-os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
 
 logger = logging.getLogger(__name__)
 
@@ -40,46 +34,8 @@ class BaseTokenizer(ABC):
     def decode(self, tokens: list[int]) -> str: ...
 
 
-class HuggingFaceTokenizer(BaseTokenizer):
-    """The embedding model's tokenizer.
-
-    `local_path` points at a tokenizer.json on disk, which is how a container
-    with no network egress still works.
-    """
-
-    def __init__(self, model_name: str, local_path: str | None = None) -> None:
-        from tokenizers import Tokenizer
-
-        if local_path:
-            self.encoder = Tokenizer.from_file(local_path)
-        else:
-            self.encoder = Tokenizer.from_pretrained(model_name)
-
-    def _safer_encode(self, string: str):
-        """Encode, retrying as ASCII if the string has characters the tokenizer
-        chokes on (lone surrogates out of PDF extraction, for instance)."""
-        try:
-            return self.encoder.encode(string, add_special_tokens=False)
-        except Exception:
-            return self.encoder.encode(
-                string.encode("ascii", "ignore").decode(), add_special_tokens=False
-            )
-
-    def encode(self, string: str) -> list[int]:
-        return self._safer_encode(string).ids
-
-    def tokenize(self, string: str) -> list[str]:
-        return self._safer_encode(string).tokens
-
-    def decode(self, tokens: list[int]) -> str:
-        return self.encoder.decode(tokens)
-
-
 class TiktokenTokenizer(BaseTokenizer):
-    """Approximate counting for LLM context budgets.
-
-    One instance per encoding name; building them is not cheap.
-    """
+    """One instance per encoding name; building them is not cheap."""
 
     _instances: dict[str, TiktokenTokenizer] = {}
 
@@ -106,31 +62,9 @@ class TiktokenTokenizer(BaseTokenizer):
         return self.encoder.decode(tokens)
 
 
-_TOKENIZER_CACHE: dict[tuple[str, str | None], BaseTokenizer] = {}
-
-
-def get_tokenizer(model_name: str, local_path: str | None = None) -> BaseTokenizer:
-    """The embedding tokenizer for `model_name`, cached per process.
-
-    Falls back to tiktoken if the model's tokenizer cannot be loaded. That keeps
-    the pipeline running offline, but chunk boundaries will be approximate.
-    """
-    key = (model_name, local_path)
-    cached = _TOKENIZER_CACHE.get(key)
-    if cached is not None:
-        return cached
-    try:
-        tokenizer: BaseTokenizer = HuggingFaceTokenizer(model_name, local_path)
-    except Exception as exc:
-        logger.warning(
-            "Could not load tokenizer for %s (%s); falling back to tiktoken. "
-            "Chunk boundaries will be approximate.",
-            model_name,
-            exc,
-        )
-        tokenizer = TiktokenTokenizer()
-    _TOKENIZER_CACHE[key] = tokenizer
-    return tokenizer
+def get_tokenizer(encoding_name: str = "cl100k_base") -> BaseTokenizer:
+    """The tokenizer chunks are measured with."""
+    return TiktokenTokenizer(encoding_name)
 
 
 def get_llm_tokenizer(encoding_name: str = "cl100k_base") -> BaseTokenizer:

@@ -270,7 +270,7 @@ def test_health_reports_each_dependency() -> None:
     # The stub has neither an index nor an embedder, so both read as down.
     # What matters is that the endpoint answers instead of raising.
     assert body["opensearch"] is False
-    assert body["model_server"] is False
+    assert body["embedder"] is False
     assert body["llm_configured"] is True
 
 

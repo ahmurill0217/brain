@@ -45,6 +45,7 @@ from brain.answer.events import (
     SearchStarted,
     UsageEvent,
 )
+from brain.answer.prompts.constants import SYSTEM_REMINDER_TAG_CLOSE, SYSTEM_REMINDER_TAG_OPEN
 from brain.answer.system_prompt import build_reminder_message, build_system_prompt
 from brain.config import BrainSettings
 from brain.llm.protocol import LLM
@@ -181,7 +182,14 @@ class AnswerLoop:
                 )
                 request: list[ChatMessage] = [system_message, *conversation]
                 if reminder:
-                    request.append(UserMessage(content=reminder))
+                    # Tagged, as the system prompt promises. Untagged, it reads as
+                    # the user dictating citation rules, and the model has been
+                    # seen repeating them back in its answer.
+                    request.append(
+                        UserMessage(
+                            content=f"{SYSTEM_REMINDER_TAG_OPEN}\n{reminder}\n{SYSTEM_REMINDER_TAG_CLOSE}"
+                        )
+                    )
 
                 text, tool_calls, usage = yield from self._stream_cycle(
                     request,
@@ -272,6 +280,7 @@ class AnswerLoop:
                 # pairs the result message back to the call.
                 id=fragment.id or f"call_{uuid.uuid4().hex}",
                 function=FunctionCall(name=fragment.name or "", arguments=fragment.arguments),
+                thought_signature=fragment.thought_signature,
             )
             for _, fragment in sorted(fragments.items())
         ]
@@ -353,6 +362,7 @@ def _absorb_fragment(fragments: dict[int, ToolCallDelta], fragment: ToolCallDelt
         return
     existing.id = existing.id or fragment.id
     existing.name = existing.name or fragment.name
+    existing.thought_signature = existing.thought_signature or fragment.thought_signature
     existing.arguments += fragment.arguments
 
 

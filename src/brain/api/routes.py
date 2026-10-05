@@ -216,12 +216,14 @@ def health(
     """
     # Both are optional capabilities rather than Protocol methods, so a custom
     # index or embedder that lacks them reports unknown instead of crashing.
+    # The embedder check only proves the Vertex credentials produce a token; it
+    # spends no embedding call.
     opensearch_ok = _safe(lambda: brain.index.client.ping())
-    model_server_ok = _safe(lambda: brain.embedder.healthy())
+    embedder_ok = _safe(lambda: brain.embedder.healthy())
     return HealthResponse(
-        ok=opensearch_ok and model_server_ok,
+        ok=opensearch_ok and embedder_ok,
         opensearch=opensearch_ok,
-        model_server=model_server_ok,
+        embedder=embedder_ok,
         index=settings.opensearch_index_name,
         llm_configured=brain.llm is not None,
     )

@@ -100,8 +100,11 @@ class AnswerOptions(BaseModel):
     # `settings.max_llm_cycles`.
     max_cycles: int | None = None
     # Make the first cycle search whether or not the model thinks it needs to.
-    # For a surface where an uncited answer is not acceptable.
-    force_search: bool = False
+    # On by default: left to choose, Gemini 2.5 Pro answered most document
+    # questions with a clarifying question instead of searching. After the
+    # first cycle the model decides for itself. Turn off for a surface that
+    # also handles small talk and would rather skip the retrieval.
+    force_search: bool = True
     # Replaces brain's default system prompt. May use the same `{{TAG}}`
     # placeholders; citation guidance is appended if it leaves no room for it.
     system_prompt: str | None = None

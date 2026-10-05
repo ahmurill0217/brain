@@ -1,6 +1,6 @@
 """A deterministic embedder for tests.
 
-Real vectors need a model server and ~2 GB of RAM. These are derived from a hash
+Real vectors need Vertex credentials and a network call. These are derived from a hash
 of the text, so they are stable across runs and machines, and identical text
 always produces an identical vector. That is enough to test the pipeline, the
 index round-trip, and ranking plumbing.

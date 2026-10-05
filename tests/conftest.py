@@ -1,9 +1,12 @@
 """Shared fixtures.
 
-The tokenizer fixture matters most: a real HuggingFace tokenizer downloads from
-the network, which would make the unit suite fail offline and in CI. `FakeTokenizer`
+The tokenizer fixture matters most: tiktoken downloads its encoding on first
+use, which would make the unit suite fail offline and in CI. `FakeTokenizer`
 splits on whitespace, so a "token" is a word. Chunk sizes in tests are expressed
 in those units and are not comparable to production token counts.
+
+Vertex is faked at the HTTP layer with `responses`, behind `FakeCredentials`,
+so no test reaches Google or needs a gcloud login.
 """
 
 from __future__ import annotations
@@ -18,6 +21,24 @@ from brain.llm.fake import FakeLLM
 from brain.models.acl import AccessScope, ExternalAccess
 from brain.models.document import Document, ExpertInfo, TextSection
 from brain.text.tokenizer import BaseTokenizer
+from brain.vertex import VertexClient
+
+VERTEX_ORIGIN = "https://us-central1-aiplatform.googleapis.com"
+VERTEX_MODELS = f"{VERTEX_ORIGIN}/v1/projects/test-project/locations/us-central1/publishers/google/models"
+
+
+class FakeCredentials:
+    """Stands in for google.auth credentials. Counts its refreshes."""
+
+    def __init__(self) -> None:
+        self.valid = False
+        self.token: str | None = None
+        self.refreshes = 0
+
+    def refresh(self, request: object) -> None:
+        self.refreshes += 1
+        self.valid = True
+        self.token = f"token-{self.refreshes}"
 
 
 class FakeTokenizer(BaseTokenizer):
@@ -57,6 +78,14 @@ class RoundTripTokenizer(BaseTokenizer):
 
     def decode(self, tokens: list[int]) -> str:
         return " ".join(self._vocab.get(t, "") for t in tokens)
+
+
+@pytest.fixture
+def vertex_client(monkeypatch: pytest.MonkeyPatch) -> VertexClient:
+    """A client for project "test-project" in us-central1 that never sleeps
+    between retries."""
+    monkeypatch.setattr("brain.vertex.RETRY_SECONDS", 0)
+    return VertexClient("test-project", "us-central1", credentials=FakeCredentials())
 
 
 @pytest.fixture

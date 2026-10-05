@@ -182,6 +182,6 @@ class AnswerResponse(BaseModel):
 class HealthResponse(BaseModel):
     ok: bool
     opensearch: bool
-    model_server: bool
+    embedder: bool
     index: str
     llm_configured: bool

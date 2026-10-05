@@ -1,7 +1,8 @@
 """All tunables, in one place.
 
-Every default here is the one retrieval quality was measured with, so quality
-out of the box is the quality we measured.
+The chunking and retrieval defaults are the ones retrieval quality was
+measured with. That measurement predates the move to gemini-embedding-001, so
+treat them as a starting point until they are re-checked on a real corpus.
 
 Reading os.environ at import time across many modules makes settings
 untestable and import order significant. brain reads the environment exactly
@@ -75,27 +76,32 @@ class BrainSettings(BaseSettings):
     assumed_document_age_days: int = 90
     max_result_window: int = 10_000
 
-    # ------------------------------------------------------- Embedding / model server
-    model_server_host: str = "localhost"
-    model_server_port: int = 9000
-    model_server_connect_timeout_s: int = 30
-    model_server_read_timeout_s: int = 600
-    embedding_model_name: str = "nomic-ai/nomic-embed-text-v1"
+    # ----------------------------------------------------------------- Vertex AI
+    # Credentials are Application Default Credentials: locally
+    # `gcloud auth application-default login`, in a deployment a service
+    # account. None takes the project those credentials belong to.
+    vertex_project: str | None = None
+    vertex_location: str = "us-central1"
+    vertex_timeout_s: float = 180.0
+
+    # ----------------------------------------------------------------- Embedding
+    embedding_model_name: str = "gemini-embedding-001"
+    # gemini-embedding-001 produces up to 3072 dimensions and truncates to this.
+    # Changing it changes the index mapping, so it requires a full reindex.
     embedding_dim: int = 768
     embedding_normalize: bool = True
-    # nomic is asymmetric: queries and passages get different prefixes, and
-    # dropping them measurably degrades retrieval.
-    embedding_query_prefix: str = "search_query: "
-    embedding_passage_prefix: str = "search_document: "
+    # Chunk size in tokens. The model accepts 2048; 512 is what retrieval was
+    # tuned with, and smaller chunks make sharper citations.
     embedding_context_size: int = 512
-    embedding_batch_size: int = 8
+    # Texts per embedding request (Vertex allows 250), and the estimated tokens
+    # per request. Vertex rejects a request over 20,000 tokens, and the estimate
+    # below is not Gemini's own count, so the budget leaves headroom.
+    embedding_batch_size: int = 100
+    embedding_request_token_budget: int = 15_000
     embedding_num_threads: int = 8
-    # Offline fallback for tokenizer.json when Hugging Face is unreachable.
-    tokenizer_local_path: str | None = None
-
-    @property
-    def model_server_url(self) -> str:
-        return f"http://{self.model_server_host}:{self.model_server_port}"
+    # tiktoken encoding that measures chunks. Gemini's tokenizer is not
+    # published, so token counts are estimates; see brain.text.tokenizer.
+    tokenizer_encoding: str = "cl100k_base"
 
     # ------------------------------------------------------------------ Chunking
     blurb_size: int = 128
@@ -185,13 +191,13 @@ class BrainSettings(BaseSettings):
     max_llm_cycles: int = 3
     stop_stream_pat: str | None = None
 
-    llm_provider: str | None = None
+    # A Gemini model id, e.g. gemini-2.5-pro. Unset, answering is unavailable
+    # and the LLM-assisted retrieval steps switch off.
     llm_model: str | None = None
+    # Some Gemini models are served only from "global". None uses vertex_location.
+    llm_location: str | None = None
     llm_temperature: float = 0.0
     llm_max_input_tokens: int = 128_000
-    llm_api_key: str | None = None
-    llm_api_base: str | None = None
-    llm_extra_kwargs: dict[str, str] = Field(default_factory=dict)
 
     # ------------------------------------------------------------- Store and API
     document_store_url: str = "sqlite:///brain.db"

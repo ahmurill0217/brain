@@ -1,14 +1,15 @@
 """The whole stack, for real.
 
-Real OpenSearch, real embeddings from the model server, real hybrid queries.
-The unit suite proves the pieces behave; this proves the deployment does.
+Real OpenSearch, real embeddings from Vertex, real hybrid queries. The unit
+suite proves the pieces behave; this proves the deployment does.
 
+    gcloud auth application-default login
     docker compose up -d
     uv run pytest -m e2e
 
-Skips rather than fails when the stack is not running, so a plain `pytest` on a
-laptop stays green. The answer assertions skip separately when no LLM is
-configured, so the retrieval half is still covered without credentials.
+Skips rather than fails when OpenSearch is not running or there are no Vertex
+credentials, so a plain `pytest` on a laptop stays green. The answer test skips
+separately unless BRAIN_LLM_MODEL names a Gemini model.
 """
 
 from __future__ import annotations
@@ -17,25 +18,23 @@ import os
 import uuid
 
 import pytest
-import requests
 
 from brain import AccessScope, Brain, BrainSettings, Document, ExternalAccess, TextSection
 from brain.answer.events import AnswerDelta, AnswerDone
-from brain.embedding.model_server_client import ModelServerEmbedder
+from brain.embedding.vertex import VertexEmbedder
 from brain.index.opensearch_index import OpenSearchDocumentIndex
+from brain.llm.vertex import VertexGeminiLLM
+from brain.models.llm import LLMConfig
 from brain.store.memory import InMemoryDocumentStore
+from brain.text.tokenizer import get_tokenizer
+from brain.vertex import VertexClient
 
 pytestmark = pytest.mark.e2e
 
 OPENSEARCH_PORT = int(os.environ.get("OPENSEARCH_HOST_PORT", "9201"))
-MODEL_SERVER_PORT = int(os.environ.get("MODEL_SERVER_HOST_PORT", "9100"))
 
 
-def _stack_is_up(settings: BrainSettings) -> bool:
-    try:
-        requests.get(f"{settings.model_server_url}/api/health", timeout=5).raise_for_status()
-    except Exception:
-        return False
+def _opensearch_is_up(settings: BrainSettings) -> bool:
     try:
         return OpenSearchDocumentIndex(settings).client.ping()
     except Exception:
@@ -51,7 +50,10 @@ def settings() -> BrainSettings:
         # A unique index per run, so a failed run cannot poison the next one and
         # two runs cannot collide.
         opensearch_index_name=f"brain_e2e_{uuid.uuid4().hex[:8]}",
-        model_server_port=MODEL_SERVER_PORT,
+        vertex_project=os.environ.get("BRAIN_VERTEX_PROJECT"),
+        vertex_location=os.environ.get("BRAIN_VERTEX_LOCATION", "us-central1"),
+        llm_model=os.environ.get("BRAIN_LLM_MODEL"),
+        llm_location=os.environ.get("BRAIN_LLM_LOCATION"),
         # Leave the cluster's own settings alone: they outlive this index and
         # would be imposed on anything else sharing the instance.
         opensearch_set_cluster_settings=False,
@@ -62,15 +64,27 @@ def settings() -> BrainSettings:
 
 @pytest.fixture(scope="module")
 def brain(settings: BrainSettings):
-    if not _stack_is_up(settings):
-        pytest.skip("OpenSearch and the model server are not running; try `docker compose up -d`")
+    if not _opensearch_is_up(settings):
+        pytest.skip("OpenSearch is not running; try `docker compose up -d`")
+    try:
+        vertex = VertexClient(settings.vertex_project, settings.vertex_location)
+    except Exception as exc:
+        pytest.skip(f"no Vertex credentials ({exc}); try `gcloud auth application-default login`")
 
+    llm = None
+    if settings.llm_model:
+        llm = VertexGeminiLLM(
+            vertex, LLMConfig(model_name=settings.llm_model), location=settings.llm_location
+        )
     index = OpenSearchDocumentIndex(settings)
+    tokenizer = get_tokenizer(settings.tokenizer_encoding)
     instance = Brain(
         settings=settings,
         document_store=InMemoryDocumentStore(),
-        embedder=ModelServerEmbedder(settings),
+        embedder=VertexEmbedder(vertex, settings, tokenizer),
         index=index,
+        llm=llm,
+        tokenizer=tokenizer,
     )
     instance.ensure_ready()
     try:
@@ -202,7 +216,7 @@ def test_the_llm_context_carries_citation_numbers(brain, ingested) -> None:
 
 def test_answer_streams_a_cited_answer(brain, ingested) -> None:
     if brain.llm is None:
-        pytest.skip("no LLM configured; set BRAIN_LLM_PROVIDER and BRAIN_LLM_MODEL")
+        pytest.skip("no LLM configured; set BRAIN_LLM_MODEL to a Gemini model id")
 
     events = list(
         brain.answer("what is the maximum discount?", access=AccessScope(bypass=True))

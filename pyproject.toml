@@ -6,41 +6,49 @@ readme = "README.md"
 requires-python = ">=3.13"
 license = { file = "LICENSE" }
 dependencies = [
-    "pydantic==2.12.5",
-    "pydantic-settings>=2.7.0",
-    "opensearch-py==3.2.0",
-    "chonkie==1.0.10",
-    "tokenizers==0.22.2",
-    "huggingface-hub>=0.27.0",
-    "tiktoken==0.13.0",
-    "requests==2.33.0",
-    "tenacity==9.1.2",
-    "sqlalchemy>=2.0.50",
-    # Used only by the tabular column analyzer, to keep its date
-    # detection exactly as pinned by the tests. Already present transitively via opensearch-py.
-    "python-dateutil==2.9.0.post0",
+    "pydantic>=2.12.5,<3",
+    "pydantic-settings>=2.7.0,<3",
+    "opensearch-py>=3.2.0,<4",
+    # 1.1 onwards renames the tokenizer argument and returns chunk objects
+    # rather than strings; moving to it is a migration, not a version bump.
+    "chonkie>=1.0.10,<1.1",
+    "tiktoken>=0.13.0,<1",
+    "requests>=2.33.0,<3",
+    # Application Default Credentials for Vertex AI.
+    "google-auth>=2.40.0,<3",
+    "tenacity>=9.1.2,<10",
+    "sqlalchemy>=2.0.50,<3",
+    # Used only by the tabular column analyzer, whose date detection is pinned
+    # by tests/unit/chunking/test_date_parity.py: a release that changes it
+    # fails there. Already present transitively via opensearch-py.
+    "python-dateutil>=2.9.0.post0,<3",
 ]
 
 [project.optional-dependencies]
 extraction = [
-    "pypdf==6.16.1",
-    "pypdfium2==5.9.0",
-    "markitdown[docx,pptx,xlsx,xls]==0.1.7",
-    "openpyxl==3.0.10",
-    "beautifulsoup4==4.12.3",
-    "trafilatura==1.12.2",
-    "chardet==5.2.0",
-    "pillow>=11.0.0",
-    "msoffcrypto-tool==6.0.0",
-    "lxml>=5.3.0",
+    "pypdf>=6.16.1,<7",
+    "pypdfium2>=5.9.0,<6",
+    "markitdown[docx,pptx,xlsx,xls]>=0.1.7,<0.2",
+    "openpyxl>=3.0.10,<4",
+    "beautifulsoup4>=4.12.3,<5",
+    "trafilatura>=1.12.2,<2",
+    "chardet>=5.2.0,<6",
+    "pillow>=11.3.0,<13",
+    "msoffcrypto-tool>=6.0.0,<7",
+    "lxml>=6.0.1,<7",
 ]
-llm = ["litellm==1.93.0"]
 api = [
-    "fastapi==0.133.1",
-    "uvicorn>=0.34.0",
-    "sse-starlette>=2.2.0",
-    "python-multipart>=0.0.20",
+    "fastapi>=0.133.1,<1",
+    "uvicorn>=0.34.0,<1",
+    "sse-starlette>=2.2.0,<4",
+    "python-multipart>=0.0.20,<1",
 ]
+
+[tool.uv]
+# brain runs on macOS and Linux. Left to cover Windows too, the lock settles on
+# the one onnxruntime (via markitdown -> magika) that Windows allows, and that
+# version has no Python 3.14 build.
+environments = ["sys_platform == 'darwin'", "sys_platform == 'linux'"]
 
 [dependency-groups]
 dev = [
@@ -58,9 +66,6 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/brain"]
 
-[tool.uv.workspace]
-members = ["model_server"]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # Put the repo root on sys.path so test modules can share helpers via
@@ -68,7 +73,7 @@ testpaths = ["tests"]
 # directory and that import fails at collection time.
 pythonpath = ["."]
 markers = [
-    "external: needs a running OpenSearch and/or model server",
+    "external: needs a running OpenSearch",
     "e2e: needs the full docker compose stack",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
@@ -117,6 +122,7 @@ layers = [
     "(brain.answer)",
     "(brain.ingest) | (brain.retrieval)",
     "(brain.llm) | (brain.extraction) | (brain.chunking) | (brain.embedding) | (brain.index) | (brain.store)",
+    "(brain.vertex)",
     "(brain.text)",
     "(brain.models)",
     "(brain.config)",
@@ -129,7 +135,7 @@ type = "forbidden"
 source_modules = ["brain.models", "brain.text"]
 forbidden_modules = [
     "opensearchpy",
-    "litellm",
+    "google",
     "chonkie",
     "torch",
     "sqlalchemy",
@@ -165,3 +171,25 @@ source_modules = [
     "brain.answer",
 ]
 forbidden_modules = ["sqlalchemy"]
+
+[[tool.importlinter.contracts]]
+name = "Google credentials are confined to brain.vertex"
+type = "forbidden"
+source_modules = [
+    "brain.models",
+    "brain.text",
+    "brain.llm",
+    "brain.extraction",
+    "brain.chunking",
+    "brain.embedding",
+    "brain.index",
+    "brain.store",
+    "brain.ingest",
+    "brain.retrieval",
+    "brain.answer",
+    "brain.api",
+]
+forbidden_modules = ["google"]
+# Reaching Vertex through brain.vertex is the point; importing google directly
+# from anywhere else is what this forbids.
+allow_indirect_imports = true

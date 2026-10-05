@@ -57,6 +57,8 @@ class ScriptedToolCall:
     call_id: str = "call_0"
     # Text the model emits alongside the call.
     text: str = ""
+    # Provider state that has to come back with the call on the next turn.
+    thought_signature: str | None = None
 
 
 ScriptedTurn = ScriptedText | ScriptedToolCall
@@ -136,6 +138,7 @@ class FakeLLM(LLM):
                             function=FunctionCall(
                                 name=turn.name, arguments=json.dumps(turn.arguments)
                             ),
+                            thought_signature=turn.thought_signature,
                         )
                     ],
                 ),
@@ -177,7 +180,11 @@ class FakeLLM(LLM):
                 delta=Delta(
                     tool_calls=[
                         ToolCallDelta(
-                            index=0, id=turn.call_id, name=turn.name, arguments=args[:midpoint]
+                            index=0,
+                            id=turn.call_id,
+                            name=turn.name,
+                            arguments=args[:midpoint],
+                            thought_signature=turn.thought_signature,
                         )
                     ]
                 )

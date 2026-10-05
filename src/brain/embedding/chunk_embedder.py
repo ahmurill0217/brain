@@ -26,8 +26,8 @@ from brain.text.enrichment import generate_enriched_content_for_chunk_embedding
 
 logger = logging.getLogger(__name__)
 
-# Breathing room before the per-document retry, so a rate limit or a model server
-# restart has a moment to clear. Module-level so tests need not sit through it.
+# Breathing room before the per-document retry, so a rate limit or a transient
+# Vertex error has a moment to clear. Module-level so tests need not sit through it.
 _FAILURE_RETRY_DELAY_S = 2.0
 
 
