@@ -1,11 +1,9 @@
 """Unit-suite isolation from the developer's environment.
 
 Every unit test builds its settings explicitly, but pydantic-settings still
-reads `BRAIN_*` variables from the process environment. Those can arrive
-without anyone exporting them: importing magika (markitdown's file-type
-detector) calls `load_dotenv(find_dotenv())`, which finds the project's `.env`
-and copies it into `os.environ`. Whether a test saw it would then depend on
-whether an extraction test happened to run first.
+reads `BRAIN_*` variables from the process environment, so a developer's shell,
+or any library that loads `.env` into `os.environ`, would leak into the
+results. (magika, once pulled in by markitdown, did exactly that on import.)
 
 The external and e2e suites read `BRAIN_*` on purpose, so this lives here
 rather than in the top-level conftest.

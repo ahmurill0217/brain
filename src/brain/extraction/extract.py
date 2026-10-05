@@ -10,8 +10,8 @@ Three things in here are load-bearing and easy to mistake for accidents:
   - PDF text extraction runs in a forked subprocess. PDFium releases the GIL and
     is fast, but a malformed PDF can abort the process from C, which no `try`
     can catch. The subprocess dies instead, and we fall back to pypdf.
-  - markitdown's pptx chart-to-markdown conversion is monkeypatched to a stub.
-    Left alone it can spend minutes on a single chart-heavy deck.
+  - A pptx chart becomes "[chart omitted]" rather than a table of its series
+    (see office.py). Rendering them can take minutes on a chart-heavy deck.
   - Workbooks are read with `data_only=True`, so a cell shows its cached value
     rather than "=SUM(B2:B10)". A formula no spreadsheet app ever evaluated has
     no cached value and is dropped, which is the accepted cost of not indexing
@@ -34,7 +34,7 @@ from collections.abc import Callable, Iterator, Sequence
 from email.parser import Parser as EmailParser
 from io import BytesIO
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, NamedTuple, cast
+from typing import IO, Any, NamedTuple, cast
 from zipfile import BadZipFile
 
 import chardet
@@ -44,21 +44,15 @@ from openpyxl.worksheet._read_only import ReadOnlyWorksheet
 from brain.config import BrainSettings
 from brain.constants import SECTION_SEPARATOR
 from brain.extraction.file_types import (
-    PRESENTATION_MIME_TYPE,
-    WORD_PROCESSING_MIME_TYPE,
     FileExtensions,
     MimeTypes,
 )
 from brain.extraction.html import parse_html_page_basic
 from brain.extraction.isolation import IsolatedProcessError, run_in_isolated_process
+from brain.extraction.office import docx_to_markdown, pptx_to_markdown
 from brain.extraction.pdf_images import iter_pdf_extracted_images
 
-if TYPE_CHECKING:
-    from markitdown import MarkItDown
-
 logger = logging.getLogger(__name__)
-
-_MARKITDOWN_CONVERTER: MarkItDown | None = None
 
 # openpyxl raises these on workbooks Excel itself opens fine. They mean "skip
 # this file", not "the extractor is broken", so they are swallowed rather than
@@ -71,46 +65,6 @@ KNOWN_OPENPYXL_BUGS = [
     "Max value is",
     "There is no item named",
 ]
-
-
-def _chart_omitted(_self: Any, _chart: Any) -> str:
-    return "\n\n[chart omitted]\n\n"
-
-
-def _patch_pptx_chart_conversion() -> None:
-    """Stub out markitdown's chart-to-markdown conversion.
-
-    Rendering a chart's series into a markdown table takes an inordinate amount
-    of time, and a deck with many or complicated charts becomes effectively
-    unindexable. The numbers behind a chart are rarely what someone searches for
-    anyway.
-
-    Reaching into a private module is a bet on markitdown's internals, so the
-    attribute is read before it is replaced: if a future version renames or
-    drops it, extraction degrades to slow rather than failing outright.
-    """
-    try:
-        from markitdown.converters._pptx_converter import PptxConverter
-
-        getattr(PptxConverter, "_convert_chart_to_markdown")  # noqa: B009
-        PptxConverter._convert_chart_to_markdown = _chart_omitted
-    except (AttributeError, ImportError) as e:
-        logger.warning(
-            "Could not patch markitdown's pptx chart conversion (%s); "
-            "chart-heavy presentations may be slow to extract.",
-            e,
-        )
-
-
-def get_markitdown_converter() -> MarkItDown:
-    global _MARKITDOWN_CONVERTER
-
-    if _MARKITDOWN_CONVERTER is None:
-        from markitdown import MarkItDown
-
-        _patch_pptx_chart_conversion()
-        _MARKITDOWN_CONVERTER = MarkItDown(enable_plugins=False)
-    return _MARKITDOWN_CONVERTER
 
 
 def get_file_ext(file_path_or_name: str | Path) -> str:
@@ -373,14 +327,9 @@ def read_docx_file(
     With `image_callback`, images are handed over one at a time and the returned
     list is empty, so a deck of 300 photographs never sits on the heap at once.
     """
-    md = get_markitdown_converter()
-    from markitdown import FileConversionException, StreamInfo, UnsupportedFormatException
-
     try:
-        doc = md.convert(
-            to_bytesio(file), stream_info=StreamInfo(mimetype=WORD_PROCESSING_MIME_TYPE)
-        )
-    except (BadZipFile, ValueError, FileConversionException, UnsupportedFormatException) as e:
+        markdown = docx_to_markdown(to_bytesio(file))
+    except Exception as e:
         logger.warning(
             "Failed to extract docx %s: %s. Attempting to read as text file.",
             file_name or "docx file",
@@ -395,13 +344,13 @@ def read_docx_file(
 
     if extract_images:
         if image_callback is None:
-            return doc.markdown, list(extract_docx_images(to_bytesio(file)))
+            return markdown, list(extract_docx_images(to_bytesio(file)))
         try:
             for img_file_bytes, img_file_name in extract_docx_images(to_bytesio(file)):
                 image_callback(img_file_bytes, img_file_name)
         except Exception:
             logger.exception("Failed to stream docx images")
-    return doc.markdown, []
+    return markdown, []
 
 
 def extract_pptx_images(pptx_bytes: IO[Any]) -> Iterator[tuple[bytes, str]]:
@@ -416,18 +365,12 @@ def extract_pptx_images(pptx_bytes: IO[Any]) -> Iterator[tuple[bytes, str]]:
 
 
 def pptx_to_text(file: IO[Any], file_name: str = "") -> str:
-    md = get_markitdown_converter()
-    from markitdown import FileConversionException, StreamInfo, UnsupportedFormatException
-
-    stream_info = StreamInfo(
-        mimetype=PRESENTATION_MIME_TYPE, filename=file_name or None, extension=".pptx"
-    )
     try:
-        presentation = md.convert(to_bytesio(file), stream_info=stream_info)
-    except (BadZipFile, ValueError, FileConversionException, UnsupportedFormatException) as e:
+        return pptx_to_markdown(to_bytesio(file))
+    except Exception as e:
+        # A corrupt deck yields no text rather than failing the batch.
         logger.warning("Failed to extract text from %s: %s", file_name or "pptx file", e)
         return ""
-    return presentation.markdown
 
 
 def read_pptx_file(

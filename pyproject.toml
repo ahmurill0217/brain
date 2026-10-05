@@ -28,7 +28,10 @@ dependencies = [
 extraction = [
     "pypdf>=6.16.1,<7",
     "pypdfium2>=5.9.0,<6",
-    "markitdown[docx,pptx,xlsx,xls]>=0.1.7,<0.2",
+    # .docx: mammoth renders HTML, markdownify turns it into markdown.
+    "mammoth>=1.11.0,<2",
+    "markdownify>=1.2.0,<2",
+    "python-pptx>=1.0.2,<2",
     "openpyxl>=3.0.10,<4",
     "beautifulsoup4>=4.12.3,<5",
     "trafilatura>=1.12.2,<2",
@@ -44,12 +47,6 @@ api = [
     "python-multipart>=0.0.20,<1",
 ]
 
-[tool.uv]
-# brain runs on macOS and Linux. Left to cover Windows too, the lock settles on
-# the one onnxruntime (via markitdown -> magika) that Windows allows, and that
-# version has no Python 3.14 build.
-environments = ["sys_platform == 'darwin'", "sys_platform == 'linux'"]
-
 [dependency-groups]
 dev = [
     "pytest>=8.3.0",
@@ -57,6 +54,7 @@ dev = [
     "ruff>=0.9.0",
     "import-linter>=2.1",
     "responses>=0.25.0",
+    "python-docx>=1.1,<2",
 ]
 
 [build-system]

@@ -4,13 +4,12 @@ import io
 import struct
 import zlib
 
-import pytest
 from pptx import Presentation
 from pptx.chart.data import CategoryChartData
 from pptx.enum.chart import XL_CHART_TYPE
 from pptx.util import Inches
+from tests.unit.extraction.office_fixtures import rich_pptx
 
-from brain.extraction import extract
 from brain.extraction.extract import extract_pptx_images, pptx_to_text, read_pptx_file
 
 
@@ -97,43 +96,41 @@ class TestPptxToText:
         assert "[chart omitted]" not in result
 
 
-class TestChartPatchDegradesGracefully:
-    """A markitdown upgrade that renames the private hook must slow extraction
-    down, not break it."""
-
-    def test_missing_attribute_is_logged_and_survived(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        from markitdown.converters._pptx_converter import PptxConverter
-
-        monkeypatch.delattr(PptxConverter, "_convert_chart_to_markdown", raising=True)
-        extract._patch_pptx_chart_conversion()
-
-        assert "Could not patch" in caplog.text
-
-    def test_missing_module_is_logged_and_survived(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        monkeypatch.setitem(
-            __import__("sys").modules, "markitdown.converters._pptx_converter", None
+class TestPptxMarkdown:
+    def test_every_supported_element_in_reading_order(self) -> None:
+        """Title as a heading, body text, a table with its header, grouped
+        shapes top to bottom, picture alt text, notes only when written, and a
+        chart reduced to a placeholder."""
+        assert pptx_to_text(rich_pptx()) == (
+            "<!-- Slide number: 1 -->\n"
+            "# Quarterly Review\n"
+            "Revenue grew\n"
+            "Costs held flat\n"
+            "\n"
+            "### Notes:\n"
+            "Mention the hiring plan.\n"
+            "\n"
+            "<!-- Slide number: 2 -->\n"
+            "# Headcount\n"
+            "| Team | People |\n"
+            "| --- | --- |\n"
+            "| Research | 12 |\n"
+            "| Platform | 7 |\n"
+            "\n"
+            "<!-- Slide number: 3 -->\n"
+            "Grouped first\n"
+            "Grouped second\n"
+            "\n"
+            "![Org chart draft](Picture4.jpg)\n"
+            "\n"
+            "<!-- Slide number: 4 -->\n"
+            "# Revenue chart\n"
+            "\n"
+            "[chart omitted]"
         )
-        extract._patch_pptx_chart_conversion()
 
-        assert "Could not patch" in caplog.text
-
-    def test_patch_is_applied_lazily(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The converter is built on first use, not at import, so the patch runs
-        exactly once and only when a file is actually converted."""
-        calls: list[int] = []
-        monkeypatch.setattr(extract, "_MARKITDOWN_CONVERTER", None)
-        monkeypatch.setattr(
-            extract, "_patch_pptx_chart_conversion", lambda: calls.append(1)
-        )
-
-        extract.get_markitdown_converter()
-        extract.get_markitdown_converter()
-
-        assert calls == [1]
+    def test_a_corrupt_deck_yields_no_text(self) -> None:
+        assert pptx_to_text(io.BytesIO(b"PK\x03\x04 not really a deck"), "bad.pptx") == ""
 
 
 class TestExtractPptxImages:
