@@ -1,10 +1,9 @@
 """Query expansion, and what each half does when it cannot do its job.
 
-Onyx raises when the semantic rephrase comes back empty. brain does not: these
-are refinements on a query the user already typed, and a search that fails
-because a secondary model timed out is worse than one that runs unrefined. Both
-functions therefore have exactly one failure mode — return nothing — and these
-tests cover every route into it.
+An empty semantic rephrase does not raise: these are refinements on a query
+the user already typed, and a search that fails because a secondary model timed
+out is worse than one that runs unrefined. Both functions therefore have exactly
+one failure mode — return nothing — and these tests cover every route into it.
 """
 
 from __future__ import annotations

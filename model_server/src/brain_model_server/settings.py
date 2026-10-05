@@ -36,7 +36,7 @@ class ModelServerSettings(BaseSettings):
     # with the network off; see `local_files_only` in encoders.py.
     default_model: str = "nomic-ai/nomic-embed-text-v1"
 
-    # Floor for torch's intra-op thread pool, kept from Onyx.
+    # Floor for torch's intra-op thread pool.
     min_threads: int = 1
 
     # Relative to the image's WORKDIR (/app). The build stage downloads weights

@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/indexing_pipeline.py.
 """Documents to indexed chunks.
 
 `IngestPipeline` is the entry point. The stages are exported alongside it

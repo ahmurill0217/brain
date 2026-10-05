@@ -1,6 +1,3 @@
-# Derived from onyx/tools/tool_implementations/search/search_utils.py,
-# onyx/context/search/pipeline.py, onyx/context/search/retrieval/search_runner.py,
-# and onyx/tools/tool_implementations/search/search_tool.py.
 """Combining several ranked result lists into one.
 
 A query is expanded into a handful of variants and each one is run separately,

@@ -1,13 +1,11 @@
-# Derived from onyx tests/unit/onyx/indexing/test_document_chunker.py.
 """Section-walk behavior: what becomes a chunk, and where the seams fall.
 
-Two adaptations run through the file:
+Two conventions run through the file:
 
-  - Onyx asserted `chunk.section_continuation`. brain's DocAwareChunk has no
-    such field, so those assertions read the ChunkPayload instead, via
-    `_continuations`.
-  - Onyx monkeypatched the module-level STRICT_CHUNK_TOKEN_LIMIT. In brain it
-    is a setting, so it is passed to the chunker.
+  - brain's DocAwareChunk has no `section_continuation` field, so continuation
+    assertions read the ChunkPayload instead, via `_continuations`.
+  - STRICT_CHUNK_TOKEN_LIMIT is a setting rather than a module-level constant,
+    so it is passed to the chunker instead of monkeypatched.
 """
 
 from __future__ import annotations
@@ -847,7 +845,7 @@ def test_inline_tabular_section_in_untitled_doc_is_chunked() -> None:
 
 def test_blob_backed_tabular_section_in_untitled_doc_is_chunked() -> None:
     """Same, but the CSV arrives through the caller's blob_reader rather than
-    inline — the path that replaces Onyx's file store."""
+    inline — the path used in place of a file store."""
     csv_text = "name,score\n" + "\n".join(f"rowval{i},{i}" for i in range(30))
     blobs = {"csv-1": csv_text.encode()}
 

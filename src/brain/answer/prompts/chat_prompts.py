@@ -1,4 +1,3 @@
-# Derived from onyx/prompts/chat_prompts.py.
 """The system prompt and the per-cycle reminders.
 
 The placeholders are `{{NAME}}` string patterns rather than `str.format` fields

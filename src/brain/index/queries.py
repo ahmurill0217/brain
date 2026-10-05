@@ -1,4 +1,3 @@
-# Derived from onyx/document_index/opensearch/search.py.
 """Query construction.
 
 Every dict in this file is ranking. The subquery list, the boosts inside the
@@ -11,9 +10,9 @@ its weights from `settings.hybrid_fusion_weights()` so the two cannot drift.
 Filters are built as a flat list of clauses that OpenSearch ANDs together. Each
 clause is self-contained so OpenSearch can cache it on its own.
 
-Two things this deliberately does not do, because Onyx does not: decay scores
-by document age, and fold `global_boost` into the score at query time. Boost is
-stored, and used by whatever ranks afterwards.
+Two things this deliberately does not do: decay scores by document age, and
+fold `global_boost` into the score at query time. Boost is stored, and used by
+whatever ranks afterwards.
 """
 
 from __future__ import annotations

@@ -1,4 +1,3 @@
-# Derived from onyx/utils/csv_utils.py.
 import csv
 import io
 from collections.abc import Generator, Iterable, Iterator, Mapping
@@ -8,9 +7,9 @@ from pydantic import BaseModel
 # Python's csv default field size limit is 131072 bytes (128 KiB), which
 # real-world data (long descriptions, pasted docs, base64 blobs) routinely
 # exceeds — the parser then raises `Error: field larger than field limit
-# (131072)` and fails the whole row, aborting indexing of the CSV section
-# (ONYX-BACKEND-H6FM). Bump to 128 MiB, matching the order of magnitude the
-# salesforce connector already opts into for bulk exports.
+# (131072)` and fails the whole row, aborting indexing of the CSV section.
+# Bump to 128 MiB, the order of magnitude bulk exports (e.g. Salesforce)
+# already need.
 _CSV_FIELD_SIZE_LIMIT_BYTES = 128 * 1024 * 1024
 csv.field_size_limit(_CSV_FIELD_SIZE_LIMIT_BYTES)
 

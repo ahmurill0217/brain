@@ -1,5 +1,3 @@
-# Section assembly derived from onyx/file_processing/extract_file_text.py
-# (stage_xlsx_sheets) and onyx/file_processing/image_utils.py.
 """Bytes to a `Document`, in one call.
 
 `extract.py` returns text and images; this decides what shape they take. The
@@ -10,10 +8,9 @@ mapping is the whole module:
   a .csv / .tsv file  -> one TabularSection
   an embedded image   -> one ImageSection carrying the bytes
 
-Onyx does this across a connector, a file store, and an indexing pipeline,
-because every blob has to be persisted before a section can reference it. Here
-the blob rides on the section, so a caller with nothing but bytes and a file
-name gets back something it can hand straight to `Brain.ingest`.
+No blob has to be persisted before a section can reference it: the blob rides
+on the section, so a caller with nothing but bytes and a file name gets back
+something it can hand straight to `Brain.ingest`.
 """
 
 from __future__ import annotations

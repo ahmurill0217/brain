@@ -1,6 +1,3 @@
-# Derived from onyx/tools/tool_implementations/search/search_tool.py (run),
-# onyx/context/search/pipeline.py, and
-# onyx/context/search/retrieval/search_runner.py.
 """One question in, a cited context string out.
 
 The shape of the pipeline is: widen, then narrow.
@@ -19,8 +16,7 @@ Every LLM step is optional and every one of them no-ops when `llm` is None, so
 the same object does pure-retrieval benchmarking and full search. They also
 degrade independently: a failed rephrase costs the rephrase and nothing else.
 
-Dropped from Onyx's search tool, all of it deployment shape rather than
-retrieval: Slack and federated sources, the source-scope and time-window LLM
+Deliberately absent, all of it deployment shape rather than retrieval: Slack and federated sources, the source-scope and time-window LLM
 decisions, the event emitter, and every database lookup.
 """
 

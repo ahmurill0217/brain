@@ -1,4 +1,3 @@
-# Derived from onyx/file_processing/extract_file_text.py.
 """Bytes in, text and embedded images out.
 
 One function per format, dispatched on extension, with `extract_text_and_images`
@@ -18,8 +17,8 @@ Three things in here are load-bearing and easy to mistake for accidents:
     no cached value and is dropped, which is the accepted cost of not indexing
     formula source as if it were prose.
 
-Onyx's Unstructured integration is gone: it read a key-value store on every
-call and routed the whole corpus through a third-party API.
+There is deliberately no Unstructured integration: it would read a key-value
+store on every call and route the whole corpus through a third-party API.
 """
 
 from __future__ import annotations
@@ -603,7 +602,7 @@ def xlsx_sheets_to_csv(file: IO[Any], file_name: str = "") -> list[tuple[str, st
     The faithful counterpart to `xlsx_sheet_extraction`: empty rows are dropped
     but columns are not trimmed and no run is collapsed, because this feeds
     `TabularSection`, which the chunker reads as a table rather than as prose.
-    Onyx streams this to a file store; here the text is returned and the caller
+    The text is returned rather than streamed to a file store, and the caller
     puts it on the section.
     """
     sheets: list[tuple[str, str]] = []

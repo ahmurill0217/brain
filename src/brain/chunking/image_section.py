@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunking/image_section_chunker.py.
 """Image sections.
 
 An image is atomic: its chunk is the summary text produced upstream, and it

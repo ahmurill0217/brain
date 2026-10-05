@@ -1,4 +1,3 @@
-# Derived from tests/unit/onyx/document_index/opensearch/test_time_cutoff_filter.py.
 """How time ranges become range clauses, and when undated documents survive.
 
 `_get_search_filters` is a pure builder, so none of this needs OpenSearch. The

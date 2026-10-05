@@ -1,5 +1,3 @@
-# Derived from onyx/document_index/opensearch/schema.py and
-# onyx/document_index/opensearch/string_filtering.py.
 """The OpenSearch index format.
 
 Three things live here, and they have to agree with each other or writes fail
@@ -63,7 +61,7 @@ METADATA_SUFFIX_FIELD_NAME = "metadata_suffix"
 PRIMARY_OWNERS_FIELD_NAME = "primary_owners"
 SECONDARY_OWNERS_FIELD_NAME = "secondary_owners"
 
-# Onyx tried Faiss (no benefit) and NMSLIB (deprecated). Lucene it is.
+# Faiss gave no benefit and NMSLIB is deprecated. Lucene it is.
 OPENSEARCH_KNN_ENGINE = "lucene"
 
 # OpenSearch rejects a document id of 512 bytes or more.

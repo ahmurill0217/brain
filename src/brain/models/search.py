@@ -1,5 +1,3 @@
-# Derived from onyx/context/search/models.py, onyx/context/search/utils.py, and
-# onyx/server/query_and_chat/streaming_models.py (CitationInfo).
 """Query-side models.
 
 At retrieval time there is no source Document to rebuild, so these are flatter

@@ -1,4 +1,3 @@
-# Derived from onyx/file_processing/image_summarization.py and onyx/prompts/image_analysis.py.
 """Turn an image into text a retriever can match against.
 
 An `ImageSection` has no words, so without this it is unfindable: nothing in a
@@ -109,7 +108,7 @@ def summarize_image_with_error_handling(
     if llm is None or not settings.image_summarization_enabled:
         return None
 
-    # Explicit argument, then settings, then the Onyx default.
+    # Explicit argument, then settings, then the module default.
     system_prompt = (
         system_prompt
         or settings.image_summarization_system_prompt

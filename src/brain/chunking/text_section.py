@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunking/text_section_chunker.py.
 """Prose sections.
 
 The only chunker that accumulates. A short section is buffered so the next one
@@ -10,8 +9,8 @@ sentence retrieves badly. Three cases, in the order they are checked:
   overflows   no room: flush the buffer and start a new one with this section
 
 Link offsets are keyed by the length of `shared_precompare_cleanup(buffer)`
-rather than the raw buffer length. That is Onyx's format and retrieval resolves
-citations against the same cleanup, so both sides have to agree.
+rather than the raw buffer length. Retrieval resolves citations against the
+same cleanup, so both sides have to agree.
 """
 
 from __future__ import annotations

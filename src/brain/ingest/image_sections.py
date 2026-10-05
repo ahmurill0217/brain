@@ -1,5 +1,3 @@
-# Derived from onyx/indexing/indexing_pipeline.py (_process_image_sections,
-# _convert_documents_without_image_summaries).
 """Give every image section some text, or an honest empty string.
 
 An `ImageSection` carries no words, so nothing about it lands in the inverted

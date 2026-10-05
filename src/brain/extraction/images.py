@@ -1,11 +1,10 @@
-# Derived from onyx/file_processing/image_utils.py and onyx/utils/b64.py.
 """Embedded images, carried inline.
 
-Onyx writes every extracted image to a file store and puts only the id on the
-section, which means indexing cannot run without Postgres and S3/MinIO behind
-it. brain keeps the bytes on the `ImageSection` instead: the caller decides
-whether they are summarized now, persisted somewhere, or dropped once the
-summary exists. `image_bytes` is excluded from serialization, so a Document can
+Extracted images are not written to a file store with only the id on the
+section, which would mean indexing could not run without Postgres and S3/MinIO
+behind it. brain keeps the bytes on the `ImageSection` instead: the caller
+decides whether they are summarized now, persisted somewhere, or dropped once
+the summary exists. `image_bytes` is excluded from serialization, so a Document can
 still be logged or shipped over HTTP without the blobs riding along.
 
 The id format is kept (`{file_id}_img_{n}`) because it is stable across

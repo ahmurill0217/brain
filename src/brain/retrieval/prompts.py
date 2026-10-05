@@ -1,4 +1,3 @@
-# Derived from onyx/prompts/search_prompts.py.
 """Prompts for the secondary LLM flows around retrieval.
 
 These live under `brain.retrieval` rather than `brain.answer.prompts`, where the

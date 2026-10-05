@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunking/tabular_section_chunker/total_descriptor.py.
 """The "what do the numbers add up to" chunk.
 
 "What did we spend in total" is answered by no row in the sheet, so retrieval

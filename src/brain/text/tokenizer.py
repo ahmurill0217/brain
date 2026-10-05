@@ -1,4 +1,3 @@
-# Derived from onyx/natural_language_processing/utils.py.
 """Tokenization.
 
 Two tokenizers, used for different jobs:

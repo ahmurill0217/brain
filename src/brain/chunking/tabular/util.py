@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunking/tabular_section_chunker/util.py.
 """Shared helpers for rendering a sheet as retrievable text."""
 
 from __future__ import annotations

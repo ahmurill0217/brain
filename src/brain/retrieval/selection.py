@@ -1,5 +1,3 @@
-# Derived from onyx/tools/tool_implementations/search/search_tool.py and
-# onyx/secondary_llm_flows/document_filter.py.
 """LLM section selection: the prompts, the budgets, and the parsing.
 
 Retrieval hands back more sections than an answer can use. Two model calls cut
@@ -204,9 +202,9 @@ def parse_section_selection(llm_response: str, num_sections: int) -> tuple[list[
                     ids_with_exclamation.add(numbers[0])
 
     bracket_match = re.search(r"\[([^\]]+)\]", llm_response)
-    # Onyx anchors each number with a trailing \b, which a "!" suffix breaks:
-    # the position between "!" and "," is not a word boundary, so "1, 2!, 3"
-    # silently truncates to "1, 2". Dropped here so the marker works in an
+    # No trailing \b after each number: a "!" suffix would break it, since the
+    # position between "!" and "," is not a word boundary, so "1, 2!, 3" would
+    # silently truncate to "1, 2". Leaving it off lets the marker work in an
     # unbracketed list too, as it already does in a bracketed one.
     comma_match = re.search(r"\b\d+!?(?:\s*,\s*\d+!?)*", llm_response)
 

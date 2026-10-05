@@ -1,5 +1,4 @@
 # MIT License. Copyright (c) 2026 Angel Murillo.
-# OpenSearch service settings derived from Onyx's deployment/docker_compose.
 #
 # Three containers: the search index, the embedding model server, and brain's
 # own API. The model server is separate because it is the only thing here that

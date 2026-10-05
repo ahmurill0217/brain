@@ -1,4 +1,3 @@
-# Derived from onyx/configs/constants.py and onyx/prompts/constants.py.
 """Literal constants that are part of the on-disk / on-index format.
 
 Nothing here is configurable: changing any of these values changes the meaning

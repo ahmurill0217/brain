@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunk_batch_store.py.
 """Spill embedded chunks to disk between embedding and indexing.
 
 A 768-float vector per chunk plus the chunk's own text is a few kilobytes; a

@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunking/tabular_section_chunker/sheet_descriptor.py.
 """The "what is in this sheet" chunk.
 
 Row chunks answer questions about rows. Nothing in them says the sheet has a

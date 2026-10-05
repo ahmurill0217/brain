@@ -1,4 +1,3 @@
-# Derived from onyx tests/unit/onyx/file_processing/test_pdf.py.
 """PDF extraction, the isolation fallback, and the embedded-image filter chain.
 
 Fixture PDFs live in tests/fixtures/ and are pre-built, so this layer has no

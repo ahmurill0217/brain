@@ -48,8 +48,8 @@ def _indexed(doc_id: str = "d1", **overrides) -> IndexedDocumentUpdate:
 def _set_operator_fields(store: DocumentStore, doc_id: str, *, boost: int, hidden: bool) -> None:
     """Write the two fields an operator owns, behind the store's back.
 
-    Onyx sets boost and hidden from an admin endpoint, never from ingest, so
-    the Protocol has no setter for them. These tests still have to prove that
+    Boost and hidden are set by an operator, never by ingest, so the
+    Protocol has no setter for them. These tests still have to prove that
     an ingest leaves them alone, which means putting them there some other way.
     """
     if isinstance(store, InMemoryDocumentStore):

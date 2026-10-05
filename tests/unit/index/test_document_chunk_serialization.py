@@ -1,4 +1,3 @@
-# Derived from tests/unit/onyx/document_index/opensearch/test_document_chunk_serialization.py.
 """Dates are stored as epoch seconds, and an unset date is stored as nothing.
 
 The mapping declares `format: epoch_second`, so a serialized ISO string would be

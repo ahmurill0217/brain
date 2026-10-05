@@ -1,10 +1,8 @@
-# Derived from onyx/natural_language_processing/search_nlp_models.py (EmbeddingModel).
 """The only real `Embedder`: an HTTP client for the bundled model server.
 
-Onyx's EmbeddingModel carries seven cloud providers, reranking, intent
-classification, and a Redis query cache in one class. brain embeds against one
-thing, so all of that is gone and what is left is the local path: trim, scrub,
-batch, POST, reassemble.
+brain embeds against one thing, so there are no cloud providers, reranking,
+intent classification, or query cache here. What is left is the local path:
+trim, scrub, batch, POST, reassemble.
 
 Only the passage side retries. A query sits on a user's critical path, where a
 minute of backoff is worse than a fast failure; an indexing run is not, and a

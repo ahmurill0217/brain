@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunking/tabular_section_chunker/analysis.py.
 """One streaming pass that classifies a sheet's columns.
 
 A spreadsheet answers two kinds of question. "What was Alice's score" is found
@@ -207,11 +206,11 @@ def _try_date(value: str) -> date | None:
     The cheap guard first: a date needs a separator, and trying every format on
     every cell of a million-row sheet is not free.
 
-    dateutil rather than the stdlib, matching Onyx exactly. It is loose enough
-    to read "10-20" as a date when a spreadsheet more often means a range, but
-    column typing is one of the inputs to retrieval quality we measured against
-    Onyx, so this is not the place to improve on it by accident. Tightening it
-    later is a deliberate change with a test, not a silent divergence.
+    dateutil rather than the stdlib. It is loose enough to read "10-20" as a
+    date when a spreadsheet more often means a range, but column typing is one
+    of the inputs to the retrieval quality we measured, so this is not the place
+    to improve on it by accident. Tightening it later is a deliberate change
+    with a test, not a silent divergence.
     """
     if len(value) < 4 or not any(c in value for c in "-/T"):
         return None

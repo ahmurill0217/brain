@@ -1,4 +1,3 @@
-# Derived from onyx/document_index/opensearch/opensearch_document_index.py.
 """The OpenSearch implementation of `DocumentIndex`.
 
 Two conversions do most of the work, and they are inverses:

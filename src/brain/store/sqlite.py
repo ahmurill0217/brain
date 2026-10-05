@@ -1,11 +1,7 @@
-# Semantics derived from onyx/indexing/indexing_pipeline.py (get_docs_to_update,
-# index_doc_batch_prepare), onyx/db/document.py (upsert_documents), and
-# onyx/indexing/adapters/document_indexing_adapter.py.
 """A `DocumentStore` in one SQLite table.
 
-Onyx spreads this across a dozen Postgres tables joined to connectors,
-credentials, and cc-pairs. brain has none of those, so what is left is one row
-per document: who it is, whether it indexed cleanly, and the two operator edits
+brain has no connectors, credentials, or cc-pairs to join against, so what
+is left is one row per document: who it is, whether it indexed cleanly, and the two operator edits
 that must outlive a re-ingest.
 
 This is the only module in brain that imports SQLAlchemy, and import-linter

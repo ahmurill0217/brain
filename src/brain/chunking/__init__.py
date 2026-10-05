@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunking/__init__.py.
 """Documents to chunks.
 
 `Chunker` is the entry point; everything else is exported because the ingest

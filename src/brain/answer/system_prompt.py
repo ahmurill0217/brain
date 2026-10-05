@@ -1,4 +1,3 @@
-# Derived from onyx/chat/prompt_utils.py and onyx/prompts/prompt_utils.py.
 """Assembling the system prompt and the per-cycle reminder.
 
 Placeholders are replaced by literal string search, never `str.format`. A
@@ -47,7 +46,7 @@ def get_current_llm_day_time(
     """Render the current date for the model.
 
     `current_time` exists so a caller (and a test) can pin the clock; left None
-    it reads local wall time, matching Onyx.
+    it reads local wall time.
     """
     current_datetime = current_time if current_time is not None else datetime.now()
     # "October 16, 2023 14:30" with include_hour_min, otherwise "October 16, 2023".

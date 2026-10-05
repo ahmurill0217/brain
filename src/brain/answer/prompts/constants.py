@@ -1,4 +1,3 @@
-# Derived from onyx/prompts/constants.py.
 """Tag literals shared by the prompt strings.
 
 The reminder tags are a protocol between brain and the model: anything the

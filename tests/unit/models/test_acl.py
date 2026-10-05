@@ -19,9 +19,9 @@ from brain.models.acl import (
 )
 
 
-def test_prefixes_match_onyx_format() -> None:
-    # These exact strings are what Onyx writes. Changing them would make an
-    # index written by either tool unreadable by the other.
+def test_prefixes_match_index_format() -> None:
+    # These exact strings are what existing indexes contain. Changing them
+    # would make those indexes unreadable.
     assert prefix_user_email("a@x.com") == "user_email:a@x.com"
     assert prefix_external_group("g1") == "external_group:g1"
 
@@ -72,8 +72,8 @@ def test_scope_filter_lists_identity_and_groups() -> None:
 
 @pytest.mark.parametrize("default_public", [True, False])
 def test_missing_access_follows_the_default(default_public: bool) -> None:
-    # Onyx treats "no permission info" as public. brain keeps that default but
-    # makes it a setting so a deployment can fail closed instead.
+    # "No permission info" is treated as public by default, but it is a
+    # setting so a deployment can fail closed instead.
     is_public, acl = acl_for_document(None, default_public=default_public)
     assert is_public is default_public
     assert acl == []

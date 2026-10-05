@@ -1,4 +1,3 @@
-# Derived from onyx/chat/citation_processor.py.
 """Resolving citation markers inside a token stream.
 
 The hard part is that a citation arrives in pieces. `[`, `1`, `]` may be three
@@ -82,8 +81,8 @@ class DynamicCitationProcessor:
             citation_mode: How to render citations in the output. All three modes
                 track what was cited via `get_seen_citations()`.
             stop_stream: Optional pattern that halts processing when it appears in
-                the stream. Onyx reads this from a global config; brain takes it
-                as an argument so the caller can pass `settings.stop_stream_pat`.
+                the stream. Taken as an argument rather than read from global
+                config, so the caller can pass `settings.stop_stream_pat`.
         """
         self.citation_to_doc: CitationMapping = {}
         self.seen_citations: CitationMapping = {}
@@ -92,6 +91,7 @@ class DynamicCitationProcessor:
         self.llm_out = ""  # everything received so far
         self.curr_segment = ""  # held back pending citation resolution
         self.hold = ""  # held back pending stop-token resolution
+        self.stopped = False  # the stop pattern has appeared; ignore the rest
         self.stop_stream = stop_stream
         self.citation_mode = citation_mode
 
@@ -158,34 +158,51 @@ class DynamicCitationProcessor:
             CitationInfo: Citation metadata, HYPERLINK mode only, yielded before
                 the text that contains the corresponding marker.
         """
-        # None -> end of stream, flush remaining segment.
+        # None -> end of stream. A held stop-pattern prefix that never completed
+        # is ordinary text, so it goes through processing before the flush.
         if token is None:
+            if self.hold and not self.stopped:
+                hold, self.hold = self.hold, ""
+                yield from self._process_text(hold)
             if self.curr_segment:
                 yield self.curr_segment
+                self.curr_segment = ""
+            return
+
+        if self.stopped:
             return
 
         # Handle stop stream token.
         if self.stop_stream:
             next_hold = self.hold + token
+            self.hold = ""
             if self.stop_stream in next_hold:
-                stop_pos = next_hold.find(self.stop_stream)
-                text_before_stop = next_hold[:stop_pos]
-                if text_before_stop:
-                    # Emit what came before the stop pattern, then fall through
-                    # to normal processing for it.
-                    self.hold = ""
-                    token = text_before_stop
-                else:
-                    # Stop pattern at the beginning, nothing to yield.
+                # Everything from the stop pattern on is discarded, including
+                # any tokens still to come. Text before it is processed as usual.
+                self.stopped = True
+                token = next_hold[: next_hold.find(self.stop_stream)]
+                if not token:
                     return
-            elif next_hold == self.stop_stream[: len(next_hold)]:
-                # Could still grow into the stop pattern; hold it back.
-                self.hold = next_hold
-                return
             else:
-                token = next_hold
-                self.hold = ""
+                # Hold back the longest tail that could still grow into the
+                # stop pattern; the rest is safe to process now.
+                keep = next(
+                    (
+                        k
+                        for k in range(min(len(self.stop_stream) - 1, len(next_hold)), 0, -1)
+                        if next_hold.endswith(self.stop_stream[:k])
+                    ),
+                    0,
+                )
+                token = next_hold[: len(next_hold) - keep]
+                self.hold = next_hold[len(next_hold) - keep :]
+                if not token:
+                    return
 
+        yield from self._process_text(token)
+
+    def _process_text(self, token: str) -> Generator[str | CitationInfo]:
+        """Process text that has cleared the stop-pattern check."""
         self.curr_segment += token
         self.llm_out += token
 
@@ -203,13 +220,27 @@ class DynamicCitationProcessor:
                         # buffered segment must stay untouched.
                         self.curr_segment = parts[0] + "```plaintext" + "```".join(parts[1:])
 
-        citation_matches = list(self.citation_pattern.finditer(self.curr_segment))
+        # A citation is left alone if it sits inside a code block. That is
+        # decided at the citation's own position, not at the end of the
+        # segment: one token can carry a citation and then open a fence.
+        # The segment is a suffix of llm_out, and labeling a fence adds no
+        # backticks, so the counts subtract cleanly.
+        fences_before_segment = self.llm_out.count(TRIPLE_BACKTICK) - self.curr_segment.count(
+            TRIPLE_BACKTICK
+        )
+        citation_matches = [
+            match
+            for match in self.citation_pattern.finditer(self.curr_segment)
+            if (fences_before_segment + self.curr_segment[: match.start()].count(TRIPLE_BACKTICK))
+            % 2
+            == 0
+        ]
         possible_citation_found = bool(
             re.search(self.possible_citation_pattern, self.curr_segment)
         )
 
         result = ""
-        if citation_matches and not in_code_block(self.llm_out):
+        if citation_matches:
             match_idx = 0
             for match in citation_matches:
                 match_span = match.span()

@@ -1,11 +1,7 @@
-# Derived from onyx/indexing/indexing_pipeline.py (index_doc_batch,
-# index_doc_batch_prepare, filter_documents, get_docs_to_update,
-# _verify_indexing_completeness).
 """Documents in, chunks in the index, bookkeeping in the store.
 
-The step order is Onyx's, and it is not arbitrary. Three orderings in
-particular are the difference between a pipeline that is safe to crash and one
-that is not:
+The step order is not arbitrary. Three orderings in particular are the
+difference between a pipeline that is safe to crash and one that is not:
 
   content hash before image summarization
       A summary is model output and changes run to run. Hashing after it would
@@ -23,7 +19,7 @@ that is not:
       nothing would ever retry it. So the store is told last, and only about
       documents the index confirmed.
 
-Dropped from Onyx, all of it infrastructure rather than pipeline: ingestion
+Deliberately absent, all of it infrastructure rather than pipeline: ingestion
 hooks, index-attempt metrics, LLM spend gating, document push, multi-index
 fan-out, Celery, Redis, hierarchy ancestors, and Postgres sanitization.
 """
@@ -161,15 +157,15 @@ def get_docs_to_update(
         an image replaced in place keeps its file id, so the content hash would
         be unchanged and would wrongly say "skip".
 
-    `ignore_time_skip` bypasses gate 1 only, matching Onyx: a caller with its
-    own checkpoint may know the timestamp is unreliable while still wanting
-    unchanged content skipped.
+    `ignore_time_skip` bypasses gate 1 only: a caller with its own checkpoint
+    may know the timestamp is unreliable while still wanting unchanged content
+    skipped.
 
     `force` bypasses both, which is the only way to rebuild a corpus whose
     content did not change but whose *processing* did. After a chunk-size change
     or an embedding-model swap, every stored hash still matches and nothing
-    would otherwise re-index. Onyx reaches this state through a secondary-index
-    build, which brain has no equivalent of.
+    would otherwise re-index. brain has no secondary-index build to reach this
+    state any other way.
 
     Returns:
         (documents to index, document id -> content hash). The hashes are

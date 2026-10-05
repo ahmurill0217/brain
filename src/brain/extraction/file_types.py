@@ -1,4 +1,3 @@
-# Derived from onyx/file_processing/file_types.py.
 """What brain will and will not try to parse.
 
 Two views of the same question — by MIME type, for callers that have one, and by

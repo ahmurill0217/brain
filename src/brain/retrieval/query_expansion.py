@@ -1,4 +1,3 @@
-# Derived from onyx/secondary_llm_flows/query_expansion.py.
 """Turning one user message into several searchable queries.
 
 Two expansions, run side by side because they look for different things:
@@ -9,8 +8,8 @@ Two expansions, run side by side because they look for different things:
   keyword expansion   a few bare keyword queries, for the BM25 half, where a
                       proprietary term beats any amount of fluent prose
 
-Both degrade to nothing on any failure, which is where this departs from Onyx:
-Onyx raises when the semantic rephrase comes back empty. A search that fails
+Both degrade to nothing on any failure, including a semantic rephrase that
+comes back empty, rather than raising. A search that fails
 outright because a secondary model timed out is a worse outcome than a search
 that runs on the query the user actually typed — which is what is left when
 both of these return nothing.

@@ -214,7 +214,7 @@ def test_re_ingesting_unchanged_documents_skips_them(settings: BrainSettings) ->
 def test_ignore_time_skip_alone_still_skips_unchanged_content(
     settings: BrainSettings,
 ) -> None:
-    """It bypasses the timestamp gate only, matching Onyx.
+    """It bypasses the timestamp gate only, by design.
 
     A caller whose timestamps are unreliable can ignore them and still not pay
     to re-index content that genuinely has not changed.

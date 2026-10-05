@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/models.py.
 """Chunk models, in the order the pipeline builds them up.
 
     DocAwareChunk    chunker output: text plus its source document

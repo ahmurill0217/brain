@@ -134,9 +134,19 @@ class TestPlaceholderReplacement:
 
         assert prompt.count("March 09, 2026") == 1
 
-    def test_date_is_not_appended_when_not_datetime_aware(self) -> None:
+    @pytest.mark.parametrize(
+        ("datetime_aware", "append_datetime_if_aware"),
+        [(False, True), (True, False)],
+        ids=["not-aware", "aware-but-not-appending"],
+    )
+    def test_date_is_appended_only_when_both_flags_are_set(
+        self, datetime_aware: bool, append_datetime_if_aware: bool
+    ) -> None:
         prompt, _ = apply_prompt_placeholders(
-            "No tag here.", datetime_aware=False, append_datetime_if_aware=True
+            "No tag here.",
+            datetime_aware=datetime_aware,
+            append_datetime_if_aware=append_datetime_if_aware,
+            current_time=FIXED_TIME,
         )
 
         assert prompt == "No tag here."
@@ -265,49 +275,40 @@ class TestBuildSystemPrompt:
         assert prompt.strip().startswith("Additional Information")
 
 
-class TestBuildReminderMessage:
-    def test_nothing_requested_yields_none(self) -> None:
-        assert build_reminder_message() is None
-
-    def test_blank_reminder_text_yields_none(self) -> None:
-        assert build_reminder_message("   ") is None
-
-    def test_citation_reminder(self) -> None:
-        assert build_reminder_message(include_citation_reminder=True) == CITATION_REMINDER
-
-    def test_file_reminder(self) -> None:
-        assert build_reminder_message(include_file_reminder=True) == FILE_REMINDER
-
-    def test_last_cycle_reminder(self) -> None:
-        reminder = build_reminder_message(is_last_cycle=True)
-
-        assert reminder == LAST_CYCLE_CITATION_REMINDER
-
-    def test_caller_text_comes_first(self) -> None:
-        reminder = build_reminder_message("Answer in French.", include_citation_reminder=True)
-
-        assert reminder is not None
-        assert reminder.startswith("Answer in French.")
-        assert reminder.endswith(CITATION_REMINDER)
-
-    @pytest.mark.parametrize("is_last_cycle", [True, False])
-    def test_all_parts_present_when_requested(self, is_last_cycle: bool) -> None:
-        reminder = build_reminder_message(
-            "Base.",
-            include_citation_reminder=True,
-            include_file_reminder=True,
-            is_last_cycle=is_last_cycle,
-        )
-
-        assert reminder is not None
-        assert CITATION_REMINDER in reminder
-        assert FILE_REMINDER in reminder
-        assert (LAST_CYCLE_CITATION_REMINDER in reminder) is is_last_cycle
-
-    def test_parts_are_blank_line_separated(self) -> None:
-        reminder = build_reminder_message(
-            "Base.", include_citation_reminder=True, include_file_reminder=True
-        )
-
-        assert reminder is not None
-        assert reminder.count("\n\n") == 2
+@pytest.mark.parametrize(
+    ("kwargs", "expected"),
+    [
+        pytest.param({}, None, id="nothing-requested"),
+        pytest.param({"reminder_text": "   "}, None, id="blank-text"),
+        pytest.param({"include_citation_reminder": True}, CITATION_REMINDER, id="citation"),
+        pytest.param({"include_file_reminder": True}, FILE_REMINDER, id="file"),
+        pytest.param({"is_last_cycle": True}, LAST_CYCLE_CITATION_REMINDER, id="last-cycle"),
+        pytest.param(
+            {"reminder_text": "  Answer in French.  ", "include_citation_reminder": True},
+            f"Answer in French.\n\n{CITATION_REMINDER}",
+            id="caller-text-first-and-stripped",
+        ),
+        # Caller text, then last-cycle, citation, file: blank-line separated.
+        pytest.param(
+            {
+                "reminder_text": "Base.",
+                "include_citation_reminder": True,
+                "include_file_reminder": True,
+                "is_last_cycle": True,
+            },
+            "\n\n".join(["Base.", LAST_CYCLE_CITATION_REMINDER, CITATION_REMINDER, FILE_REMINDER]),
+            id="everything",
+        ),
+        pytest.param(
+            {
+                "reminder_text": "Base.",
+                "include_citation_reminder": True,
+                "include_file_reminder": True,
+            },
+            "\n\n".join(["Base.", CITATION_REMINDER, FILE_REMINDER]),
+            id="not-last-cycle",
+        ),
+    ],
+)
+def test_build_reminder_message(kwargs: dict, expected: str | None) -> None:
+    assert build_reminder_message(**kwargs) == expected

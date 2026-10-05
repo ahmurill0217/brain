@@ -1,5 +1,3 @@
-# Derived from onyx/context/search/ and
-# onyx/tools/tool_implementations/search/.
 """A query to a cited context string.
 
 `Searcher` is the entry point. Everything below it is exported too, because the

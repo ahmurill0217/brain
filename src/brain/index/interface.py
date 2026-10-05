@@ -1,4 +1,3 @@
-# Derived from onyx/document_index/interfaces_new.py.
 """The document index boundary.
 
 One implementation today (OpenSearch), but ingest and retrieval both depend on

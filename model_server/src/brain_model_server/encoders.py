@@ -1,9 +1,8 @@
 # Derived from model_server/encoders.py.
 """The one live route: `POST /encoder/bi-encoder-embed`.
 
-Onyx's version also routes to seven cloud providers and hosts the reranker and
-the intent classifier. All of that is gone; what is left is the local
-SentenceTransformer path.
+There is no cloud-provider routing, reranker, or intent classifier here; this
+is only the local SentenceTransformer path.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 [project]
 name = "brain"
 version = "0.1.0"
-description = "Document ingest, hybrid retrieval, and cited answering. Extracted from Onyx."
+description = "Document ingest, hybrid retrieval, and cited answering."
 readme = "README.md"
 requires-python = ">=3.13"
 license = { file = "LICENSE" }
@@ -16,8 +16,8 @@ dependencies = [
     "requests==2.33.0",
     "tenacity==9.1.2",
     "sqlalchemy>=2.0.50",
-    # Used only by the tabular column analyzer, to match Onyx's date detection
-    # exactly. Already present transitively via opensearch-py.
+    # Used only by the tabular column analyzer, to keep its date
+    # detection exactly as pinned by the tests. Already present transitively via opensearch-py.
     "python-dateutil==2.9.0.post0",
 ]
 
@@ -80,8 +80,8 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "ARG", "C4", "PIE", "RET"]
-# UP042: (str, Enum) is deliberate — it matches Onyx and serializes predictably
-#         through pydantic and JSON. StrEnum would be a gratuitous divergence.
+# UP042: (str, Enum) is deliberate — it serializes predictably through
+#         pydantic and JSON, and StrEnum would be churn for no gain.
 # UP047: PEP-695 generics are not worth the churn on two helpers.
 ignore = ["E501", "B008", "RUF012", "UP042", "UP047"]
 
@@ -98,9 +98,8 @@ ignore = ["E501", "B008", "RUF012", "UP042", "UP047"]
 source = ["src/brain"]
 
 # ---------------------------------------------------------------------------
-# Layer enforcement. Onyx has genuine import cycles (nlp -> indexing,
-# document_index -> indexing.models, indexing_pipeline -> document_index).
-# These contracts make it impossible to inherit them.
+# Layer enforcement. These contracts make import cycles between indexing,
+# retrieval, and the document index impossible rather than merely discouraged.
 # ---------------------------------------------------------------------------
 [tool.importlinter]
 root_packages = ["brain"]
@@ -138,7 +137,7 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
-name = "No Onyx infrastructure anywhere"
+name = "No heavyweight infrastructure anywhere"
 type = "forbidden"
 source_modules = ["brain"]
 forbidden_modules = [

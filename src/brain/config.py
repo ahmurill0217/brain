@@ -1,12 +1,9 @@
-# Values derived from onyx shared_configs/configs.py, onyx/configs/app_configs.py,
-# chat_configs.py, model_configs.py, opensearch/constants.py, and
-# tools/tool_implementations/search/constants.py.
 """All tunables, in one place.
 
-Every default here matches Onyx's, so retrieval quality out of the box is the
-quality we measured. Deviations are marked.
+Every default here is the one retrieval quality was measured with, so quality
+out of the box is the quality we measured.
 
-Onyx reads os.environ at import time in dozens of modules, which makes settings
+Reading os.environ at import time across many modules makes settings
 untestable and import order significant. brain reads the environment exactly
 once, here, and every other module takes `settings` as an argument.
 """
@@ -33,7 +30,7 @@ class HybridSubqueryConfig(int, Enum):
 
     # title vector + content vector + combined keyword -> [0.1, 0.45, 0.45]
     TITLE_AND_CONTENT_VECTOR = 1
-    # content vector + combined keyword -> [0.5, 0.5]  (Onyx default)
+    # content vector + combined keyword -> [0.5, 0.5]  (default)
     CONTENT_VECTOR_ONLY = 2
 
 
@@ -131,7 +128,7 @@ class BrainSettings(BaseSettings):
     # Only takes effect when an LLM is configured.
     image_summarization_enabled: bool = True
     image_summarization_timeout_s: int = 300
-    # None means use the module defaults ported from Onyx. Override to steer
+    # None means use the module defaults. Override to steer
     # summaries toward your own corpus (schematics, screenshots, slides).
     image_summarization_system_prompt: str | None = None
     image_summarization_user_prompt: str | None = None
@@ -157,7 +154,7 @@ class BrainSettings(BaseSettings):
     html_link_strategy: str = "strip"
 
     # -------------------------------------------------------------------- Access
-    # Matches Onyx: a document ingested without permissions is world-readable.
+    # A document ingested without permissions is world-readable.
     # Set false to fail closed instead.
     default_document_public: bool = True
 
@@ -183,8 +180,8 @@ class BrainSettings(BaseSettings):
     section_expansion_enabled: bool = False
 
     # -------------------------------------------------------------------- Answer
-    # Onyx allows 6. Three is enough for search-then-answer with one retry and
-    # bounds the cost of a runaway loop.
+    # Three is enough for search-then-answer with one retry and bounds the cost
+    # of a runaway loop.
     max_llm_cycles: int = 3
     stop_stream_pat: str | None = None
 
