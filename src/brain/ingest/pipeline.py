@@ -35,7 +35,7 @@ from brain.config import BrainSettings
 from brain.embedding.batch_store import ChunkBatchStore
 from brain.embedding.chunk_embedder import embed_chunks_with_failure_handling
 from brain.embedding.protocol import Embedder
-from brain.index.interface import DocumentIndex
+from brain.index.interface import DocumentIndex, MetadataUpdateRequest
 from brain.ingest.contextual_rag import add_contextual_summaries
 from brain.ingest.image_sections import process_image_sections
 from brain.ingest.vector_write import write_chunks_to_vector_db_with_backoff
@@ -296,10 +296,21 @@ class IngestPipeline:
                 len(filtered_documents),
             )
 
+        # 2b. The gates compare content, not permissions. A skipped document
+        # whose access changed would otherwise keep serving its old ACL, so a
+        # revoked user would still find it.
+        updatable_ids = {doc.id for doc in updatable_docs}
+        access_updated = self._update_changed_access(
+            [doc for doc in filtered_documents if doc.id not in updatable_ids],
+            records,
+            failures,
+        )
+
         if not updatable_docs:
             return IngestResult(
                 total_documents=len(filtered_documents),
                 skipped_documents=skipped,
+                access_updated_documents=access_updated,
                 failures=failures,
             )
 
@@ -404,6 +415,7 @@ class IngestPipeline:
         return IngestResult(
             total_documents=len(filtered_documents),
             skipped_documents=skipped,
+            access_updated_documents=access_updated,
             indexed_documents=len(written_ids),
             new_documents=sum(1 for r in insertion_records if not r.already_existed),
             total_chunks=sum(chunk_counts.get(doc_id, 0) for doc_id in written_ids),
@@ -495,6 +507,56 @@ class IngestPipeline:
                 continue
             counts[doc_id] = counts.get(doc_id, 0) + 1
         return counts
+
+    def _update_changed_access(
+        self,
+        skipped_docs: list[Document],
+        records: dict[str, DocumentRecord],
+        failures: list[DocumentFailure],
+    ) -> int:
+        """Patch the index ACL of skipped documents whose access changed.
+
+        Compared as the effective (is_public, acl) pair, so a change that does
+        not alter who can see the document costs nothing. The index is patched
+        before the store records the new access: if the patch fails, the record
+        still holds the old access and the next run tries again.
+
+        Returns how many documents were patched.
+        """
+        default_public = self.settings.default_document_public
+        updated = 0
+        for doc in skipped_docs:
+            record = records.get(doc.id)
+            if record is None:
+                continue
+            is_public, acl = acl_for_document(doc.external_access, default_public=default_public)
+            if (is_public, acl) == acl_for_document(
+                record.external_access, default_public=default_public
+            ):
+                continue
+            try:
+                with self.store.lock([doc.id]):
+                    self.index.update(
+                        MetadataUpdateRequest(
+                            document_ids=[doc.id], is_public=is_public, access_control_list=acl
+                        )
+                    )
+                    self.store.upsert_pending([doc])
+            except Exception as exc:
+                # Loud on purpose: until this succeeds the index may still show
+                # the document to people who have lost access.
+                logger.exception("Failed to update access for document '%s'", doc.id)
+                failures.append(
+                    DocumentFailure(
+                        document_id=doc.id,
+                        failure_message=f"Access changed but the index was not updated: {exc}",
+                    )
+                )
+                continue
+            updated += 1
+        if updated:
+            logger.info("Updated access in place for %s unchanged document(s).", updated)
+        return updated
 
     def _build_enrichment(
         self,

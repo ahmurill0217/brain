@@ -73,7 +73,12 @@ class SearchableIndex:
         return len(self._chunks.pop(document_id, []))
 
     def update(self, update_request) -> None:
-        return None
+        for doc_id in update_request.document_ids:
+            for chunk in self._chunks.get(doc_id, []):
+                if update_request.is_public is not None:
+                    chunk.is_public = update_request.is_public
+                if update_request.access_control_list is not None:
+                    chunk.access_control_list = update_request.access_control_list
 
     def _visible(self, chunk: IndexableChunk, filters: IndexFilters) -> bool:
         acl = filters.access_control_list
@@ -384,3 +389,31 @@ def test_from_settings_wires_vertex_models(
     assert isinstance(brain.llm, VertexGeminiLLM)
     assert brain.llm._client is brain.embedder._client
     assert brain.llm._url("generateContent") == expected_url_prefix + "generateContent"
+
+
+def test_revoking_access_takes_effect_on_re_ingest(settings: BrainSettings) -> None:
+    """Content unchanged, Bob removed: the re-ingest is skipped as a content
+    change, and Bob must still lose the document."""
+    brain = _brain(settings)
+
+    def comp(access: ExternalAccess) -> Document:
+        return Document(
+            id="comp",
+            source="drive",
+            semantic_identifier="Comp bands",
+            sections=[TextSection(text="Engineering band four pays well.", link="l")],
+            external_access=access,
+        )
+
+    def bob_finds_it() -> bool:
+        result = brain.search("band four", access=AccessScope(user_email="bob@ex.test"))
+        return bool(result.search_docs)
+
+    brain.ingest([comp(ExternalAccess(external_user_emails={"alice@ex.test", "bob@ex.test"}))])
+    assert bob_finds_it()
+
+    result = brain.ingest([comp(ExternalAccess(external_user_emails={"alice@ex.test"}))])
+
+    assert (result.skipped_documents, result.access_updated_documents) == (1, 1)
+    assert not bob_finds_it()
+    assert brain.search("band four", access=AccessScope(user_email="alice@ex.test")).search_docs
