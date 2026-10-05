@@ -2,8 +2,8 @@
 
 Everything below this file takes its collaborators as arguments and constructs
 nothing — that is what makes the packages testable in isolation. Somebody still
-has to decide that the index is OpenSearch, the embedder is the model server,
-and the store is SQLite, and this is that somebody. `Brain.from_settings` is the
+has to decide that the index is OpenSearch, the models are on Vertex AI, and
+the store is SQLite, and this is that somebody. `Brain.from_settings` is the
 only place in brain where a concrete backend is chosen.
 
 The constructor takes them all instead, so a host that already has its own
@@ -12,15 +12,14 @@ never touches `from_settings`.
 
 The LLM is optional throughout. Without one, ingest drops image summaries and
 contextual RAG, search skips its three LLM steps, and `answer` raises — so a
-deployment that only needs retrieval never installs litellm and never
-configures a provider.
+deployment that only needs retrieval never has to choose a Gemini model.
 """
 
 from __future__ import annotations
 
 import logging
 from collections.abc import Iterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from brain.answer.events import AnswerEvent
 from brain.answer.loop import AnswerLoop
@@ -46,6 +45,9 @@ from brain.retrieval.searcher import Searcher
 from brain.store.protocol import DocumentStore
 from brain.text.tokenizer import BaseTokenizer, get_tokenizer
 
+if TYPE_CHECKING:
+    from brain.vertex import VertexClient
+
 logger = logging.getLogger(__name__)
 
 # `sqlite:///:memory:` is the one store url that must not be persisted, and the
@@ -58,8 +60,7 @@ class NoLLMConfiguredError(RuntimeError):
     """Answering was attempted without an LLM.
 
     Its own type because it is the one failure a caller can act on without
-    reading the message: set `BRAIN_LLM_PROVIDER` and `BRAIN_LLM_MODEL`, and
-    install the `llm` extra.
+    reading the message: set `BRAIN_LLM_MODEL` to a Gemini model id.
     """
 
 
@@ -84,11 +85,7 @@ class Brain:
         self.llm = llm
         self.blob_reader = blob_reader
 
-        # The chunker measures against the *embedding* model's tokenizer, so
-        # chunk boundaries match what the model server will actually see.
-        self.tokenizer = tokenizer or get_tokenizer(
-            settings.embedding_model_name, settings.tokenizer_local_path
-        )
+        self.tokenizer = tokenizer or get_tokenizer(settings.tokenizer_encoding)
         self.chunker = Chunker(
             self.tokenizer,
             settings=settings,
@@ -125,20 +122,25 @@ class Brain:
         """
         settings = settings or get_settings()
 
-        # Imported here rather than at module scope: OpenSearch and the model
-        # server client are cheap, but this keeps `from brain import Brain` from
-        # pulling in a chain that a caller constructing Brain directly with
-        # fakes has no use for.
-        from brain.embedding.model_server_client import ModelServerEmbedder
+        # Imported here rather than at module scope, so `from brain import
+        # Brain` does not pull in google.auth or opensearch-py for a caller
+        # that constructs Brain directly with fakes.
+        from brain.embedding.vertex import VertexEmbedder
         from brain.index.opensearch_index import OpenSearchDocumentIndex
+        from brain.vertex import VertexClient
 
+        # One client for both models: one set of credentials, one token
+        # refresh, one connection pool.
+        vertex = VertexClient(settings.vertex_project, settings.vertex_location)
+        tokenizer = get_tokenizer(settings.tokenizer_encoding)
         return cls(
             settings=settings,
             document_store=document_store or _build_document_store(settings),
-            embedder=ModelServerEmbedder(settings),
+            embedder=VertexEmbedder(vertex, settings, tokenizer),
             index=OpenSearchDocumentIndex(settings),
-            llm=llm if llm is not None else _build_llm(settings),
+            llm=llm if llm is not None else _build_llm(settings, vertex),
             blob_reader=blob_reader,
+            tokenizer=tokenizer,
         )
 
     def ensure_ready(self) -> None:
@@ -207,9 +209,9 @@ class Brain:
         """
         if self.answer_loop is None:
             raise NoLLMConfiguredError(
-                "Answering needs an LLM. Set BRAIN_LLM_PROVIDER and BRAIN_LLM_MODEL "
-                "(and install the 'llm' extra), or pass llm= when constructing Brain. "
-                "Ingest and search work without one."
+                "Answering needs an LLM. Set BRAIN_LLM_MODEL to a Gemini model id, "
+                "or pass llm= when constructing Brain. Ingest and search work "
+                "without one."
             )
         return self.answer_loop.run(
             query, access=access, history=history, filters=filters, options=options
@@ -260,39 +262,25 @@ def _build_document_store(settings: BrainSettings) -> DocumentStore:
     return SQLiteDocumentStore(settings.document_store_url)
 
 
-def _build_llm(settings: BrainSettings) -> LLM | None:
-    """The configured LLM, or None with a line in the log saying why.
+def _build_llm(settings: BrainSettings, vertex: VertexClient) -> LLM | None:
+    """The configured Gemini model, or None when none is configured.
 
-    Missing configuration and a missing litellm are both survivable: ingest and
-    search still work, and `answer` explains itself when it is called. Failing
-    to start instead would take a working retrieval deployment down over a
-    feature it does not use.
+    No model is survivable: ingest and search still work, and `answer`
+    explains itself when it is called. Failing to start instead would take a
+    working retrieval deployment down over a feature it does not use.
     """
-    if not settings.llm_provider or not settings.llm_model:
-        logger.info("No LLM configured; answering is unavailable.")
+    if not settings.llm_model:
+        logger.info("No LLM configured (BRAIN_LLM_MODEL); answering is unavailable.")
         return None
 
-    from brain.llm.litellm_adapter import LiteLLMAdapter
+    from brain.llm.vertex import VertexGeminiLLM
 
-    llm = LiteLLMAdapter(
+    return VertexGeminiLLM(
+        vertex,
         LLMConfig(
-            provider=settings.llm_provider,
             model_name=settings.llm_model,
             temperature=settings.llm_temperature,
             max_input_tokens=settings.llm_max_input_tokens,
-            api_key=settings.llm_api_key,
-            api_base=settings.llm_api_base,
-            extra_kwargs=dict(settings.llm_extra_kwargs),
-        )
+        ),
+        location=settings.llm_location,
     )
-    try:
-        # litellm is imported lazily on the first call, so an absent extra would
-        # otherwise surface halfway through someone's first answer.
-        import litellm  # noqa: F401
-    except ImportError:
-        logger.warning(
-            "BRAIN_LLM_PROVIDER is set but litellm is not installed; answering is "
-            "unavailable. Install brain[llm]."
-        )
-        return None
-    return llm

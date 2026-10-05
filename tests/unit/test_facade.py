@@ -279,7 +279,9 @@ def test_a_shrinking_document_leaves_no_stale_chunks(settings: BrainSettings) ->
         source="wiki",
         semantic_identifier="Notes",
         title="Notes",
-        sections=[TextSection(text=" ".join(f"sentence {i} alpha beta gamma." for i in range(900)))],
+        sections=[
+            TextSection(text=" ".join(f"sentence {i} alpha beta gamma." for i in range(900)))
+        ],
     )
     brain.ingest([long_doc])
     before = sum(len(v) for v in brain.index._chunks.values())
@@ -333,3 +335,52 @@ def test_extract_builds_a_document_from_bytes(settings: BrainSettings) -> None:
     # A delimited file becomes a table, not prose, so the header survives every
     # chunk rather than only the first.
     assert document.sections[0].type.value == "tabular"
+
+
+@pytest.mark.parametrize(
+    ("llm_model", "llm_location", "expected_url_prefix"),
+    [
+        (None, None, None),
+        (
+            "gemini-2.5-pro",
+            None,
+            "https://us-central1-aiplatform.googleapis.com/v1/projects/adc-project/"
+            "locations/us-central1/publishers/google/models/gemini-2.5-pro:",
+        ),
+        (
+            "gemini-3.5-flash",
+            "global",
+            "https://aiplatform.googleapis.com/v1/projects/adc-project/"
+            "locations/global/publishers/google/models/gemini-3.5-flash:",
+        ),
+    ],
+)
+def test_from_settings_wires_vertex_models(
+    monkeypatch: pytest.MonkeyPatch,
+    settings: BrainSettings,
+    llm_model: str | None,
+    llm_location: str | None,
+    expected_url_prefix: str | None,
+) -> None:
+    """One client serves both models, its project falls back to the ADC
+    project, and no model means no LLM rather than a failure to start."""
+    from tests.conftest import FakeCredentials
+
+    from brain.embedding.vertex import VertexEmbedder
+    from brain.llm.vertex import VertexGeminiLLM
+
+    monkeypatch.setattr("google.auth.default", lambda scopes: (FakeCredentials(), "adc-project"))
+    # tiktoken would download its encoding; the unit suite stays offline.
+    monkeypatch.setattr("brain.facade.get_tokenizer", lambda encoding: FakeTokenizer())
+    configured = settings.model_copy(update={"llm_model": llm_model, "llm_location": llm_location})
+
+    brain = Brain.from_settings(configured, document_store=InMemoryDocumentStore())
+
+    assert isinstance(brain.embedder, VertexEmbedder)
+    assert brain.embedder._client.project == "adc-project"
+    if expected_url_prefix is None:
+        assert brain.llm is None
+        return
+    assert isinstance(brain.llm, VertexGeminiLLM)
+    assert brain.llm._client is brain.embedder._client
+    assert brain.llm._url("generateContent") == expected_url_prefix + "generateContent"

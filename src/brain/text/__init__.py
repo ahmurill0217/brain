@@ -16,7 +16,6 @@ from brain.text.processing import (
 from brain.text.stopwords import ENGLISH_STOPWORDS_SET, strip_stopwords
 from brain.text.tokenizer import (
     BaseTokenizer,
-    HuggingFaceTokenizer,
     TiktokenTokenizer,
     count_tokens,
     get_llm_tokenizer,
@@ -29,7 +28,6 @@ from brain.text.tokenizer import (
 __all__ = [
     "ENGLISH_STOPWORDS_SET",
     "BaseTokenizer",
-    "HuggingFaceTokenizer",
     "TiktokenTokenizer",
     "clean_text",
     "cleanup_content_for_chunks",

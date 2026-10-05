@@ -1,14 +1,19 @@
 # MIT License. Copyright (c) 2026 Angel Murillo.
 #
-# The brain API image. Deliberately has no PyTorch: embeddings are computed by
-# the model server over HTTP, which keeps this image small enough to rebuild and
-# redeploy quickly.
+# The brain API image. Both models (Gemini and gemini-embedding-001) are called
+# on Vertex AI, so there are no weights here and the image stays small.
 
 ARG PYTHON_IMAGE=python:3.13-slim
 
 FROM ${PYTHON_IMAGE} AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.23 /uv /usr/local/bin/uv
+
+# chonkie publishes no wheel for linux/arm64 (an Apple Silicon build), so it is
+# compiled from source there. Builder stage only; the runtime image has no gcc.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -21,18 +26,14 @@ ENV VIRTUAL_ENV=/app/.venv
 COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
 RUN uv venv "${VIRTUAL_ENV}" \
-    && uv pip install --no-cache ".[extraction,llm,api]"
+    && uv pip install --no-cache ".[extraction,api]"
 
 # ---------------------------------------------------------------------------
-# Tokenizer. Chunk boundaries are measured with the embedding model's own
-# tokenizer, and fetching it at runtime would make a cold start depend on
-# Hugging Face being reachable. Baked in so the container starts offline.
+# Tokenizer. Chunks are measured with tiktoken, which downloads its encoding
+# on first use. Baked in so a cold start does not depend on reaching it.
 # ---------------------------------------------------------------------------
-ENV HF_HOME=/app/.cache/huggingface
-ARG EMBEDDING_MODEL=nomic-ai/nomic-embed-text-v1
-RUN /app/.venv/bin/python -c "\
-from huggingface_hub import hf_hub_download; \
-hf_hub_download(repo_id='${EMBEDDING_MODEL}', filename='tokenizer.json')"
+ENV TIKTOKEN_CACHE_DIR=/app/.cache/tiktoken
+RUN /app/.venv/bin/python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
 
 # ---------------------------------------------------------------------------
 # Runtime.
@@ -62,9 +63,8 @@ COPY --chown=brain:brain pyproject.toml README.md LICENSE ./
 RUN mkdir -p /data && chown brain:brain /data
 
 ENV PATH="/app/.venv/bin:${PATH}" \
-    HF_HOME=/app/.cache/huggingface \
+    TIKTOKEN_CACHE_DIR=/app/.cache/tiktoken \
     PYTHONUNBUFFERED=1 \
-    TOKENIZERS_PARALLELISM=false \
     BRAIN_API_HOST=0.0.0.0 \
     BRAIN_API_PORT=8100
 

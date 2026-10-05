@@ -33,7 +33,7 @@ def create_app(
     """Build the app.
 
     `brain` is injectable so tests can supply one backed by fakes instead of
-    standing up OpenSearch and a model server.
+    standing up OpenSearch or calling Vertex.
     """
     resolved = settings or get_settings()
 

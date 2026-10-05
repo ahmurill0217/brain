@@ -36,7 +36,7 @@ class ExplodingEmbedder(FakeEmbedder):
         large_chunks_present: bool = False,
     ) -> list[Embedding]:
         if any(self._fail_marker in text for text in texts):
-            raise RuntimeError("model server exploded")
+            raise RuntimeError("embedding backend exploded")
         return super().embed(texts, text_type, large_chunks_present=large_chunks_present)
 
 
@@ -188,7 +188,7 @@ def test_one_bad_document_does_not_sink_the_batch(
     assert {c.source_document.id for c in embedded} == {"doc-good"}
     assert len(embedded) == 2
     assert [f.document_id for f in failures] == ["doc-bad"]
-    assert "model server exploded" in failures[0].failure_message
+    assert "embedding backend exploded" in failures[0].failure_message
     assert failures[0].document_link == "https://ex.test/1"
 
 

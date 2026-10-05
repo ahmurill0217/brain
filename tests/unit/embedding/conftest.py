@@ -75,15 +75,10 @@ def make_index_chunk() -> Callable[..., IndexChunk]:
 
 @pytest.fixture
 def embedding_settings() -> BrainSettings:
-    """Settings pointed at a model server that does not exist.
-
-    Every test either mocks the transport or expects a failure, so the host is a
-    fixed fake rather than localhost, where a developer's own model server could
-    silently answer.
-    """
+    """Settings for a fake Vertex project with small vectors."""
     return BrainSettings(
         _env_file=None,
-        model_server_host="model-server.invalid",
-        model_server_port=9000,
+        vertex_project="test-project",
+        vertex_location="us-central1",
         embedding_dim=8,
     )

@@ -1,17 +1,15 @@
 """LLM message and response types.
 
-These mirror the OpenAI chat-completions shape because every provider worth
-using speaks it, litellm translates into it, and it keeps the answer loop from
-knowing which vendor is behind the call.
-
-No provider SDK is imported here. The litellm adapter converts at the boundary,
-so replacing litellm with the Google GenAI SDK touches one file.
+These mirror the OpenAI chat-completions shape: it is the most widely
+understood one, and it keeps the answer loop from knowing which vendor is
+behind the call. The Vertex adapter converts to and from Gemini's
+contents/parts shape at the boundary, so nothing here imports a provider SDK.
 """
 
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -78,6 +76,10 @@ class ToolCall(BaseModel):
     type: Literal["function"] = "function"
     id: str
     function: FunctionCall
+    # Opaque provider state issued with the call that must be sent back with it
+    # on the next turn. Gemini calls it a thought signature, and newer models
+    # reject a replayed function call that arrives without one.
+    thought_signature: str | None = None
 
 
 class ThinkingBlock(BaseModel):
@@ -135,6 +137,7 @@ class ToolCallDelta(BaseModel):
     id: str | None = None
     name: str | None = None
     arguments: str = ""
+    thought_signature: str | None = None
 
 
 class Delta(BaseModel):
@@ -186,26 +189,17 @@ class ModelResponse(BaseModel):
 
 
 class LLMConfig(BaseModel):
-    """Everything needed to address a model.
+    """Model identity and limits.
 
-    `extra_kwargs` carries provider-specific settings (vertex_project,
-    vertex_location) without brain needing to know what they mean.
+    Where the model is served from (project, location, credentials) belongs to
+    the adapter, not here: this is what the rest of brain may know about it.
     """
 
-    provider: str
+    provider: str = "vertex"
     model_name: str
     temperature: float = 0.0
     # Used to size the context budget when packing retrieved sections.
     max_input_tokens: int = 128_000
-    api_key: str | None = None
-    api_base: str | None = None
-    api_version: str | None = None
-    extra_kwargs: dict[str, Any] = Field(default_factory=dict)
-
-    @property
-    def model_string(self) -> str:
-        """litellm's "provider/model" form, e.g. vertex_ai/gemini-2.5-pro."""
-        return f"{self.provider}/{self.model_name}"
 
 
 def llm_response_to_string(response: ModelResponse) -> str:

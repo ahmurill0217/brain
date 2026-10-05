@@ -14,3 +14,13 @@ data/
 
 # macOS
 .DS_Store
+
+# Local compose overrides, e.g. mounting your own gcloud credentials.
+docker-compose.override.yml
+
+# Local test documents; never committed.
+testcorpus/
+
+# Corpus evaluations: the runner, per-corpus question files, and reports.
+# Kept local while the corpora are private.
+evals/
