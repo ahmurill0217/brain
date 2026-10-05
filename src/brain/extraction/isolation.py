@@ -1,4 +1,3 @@
-# Derived from onyx/utils/process_isolation.py.
 """Run a callable in a throwaway child process.
 
 A native crash (SIGSEGV/SIGABRT) or a hang inside a C parser takes down the

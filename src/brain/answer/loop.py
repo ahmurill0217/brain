@@ -1,6 +1,3 @@
-# Derived from onyx/chat/llm_loop.py (run_llm_loop), onyx/chat/llm_step.py
-# (run_llm_step, _update_tool_call_with_delta), and
-# onyx/tools/tool_implementations/search/search_tool.py (tool_definition).
 """Search, then answer, with citations resolved as the text arrives.
 
 The loop is: ask the model, and if it called the search tool, run the search,
@@ -21,10 +18,10 @@ where the first stopped. Letting both start at 1 would mean the model was shown
 two different documents as `[1]` and every citation after the second search
 would resolve to whichever one registered first.
 
-Everything Onyx's loop does that brain does not is either a tool brain does not
-ship (image generation, code execution, web search, memory) or infrastructure
-(emitters, placements, database sessions, token budgeting against a persona).
-What is left is one tool and one citation processor.
+Deliberately absent: other tools (image generation, code execution, web
+search, memory) and chat infrastructure (emitters, placements, database
+sessions, token budgeting against a persona). What is left is one tool and one
+citation processor.
 """
 
 from __future__ import annotations
@@ -74,7 +71,7 @@ logger = logging.getLogger(__name__)
 INTERNAL_SEARCH_TOOL_NAME = "internal_search"
 QUERIES_FIELD = "queries"
 
-# Declared exactly as Onyx declares it. One parameter, because every other
+# One parameter, because every other
 # narrowing brain supports (source, time window, document set) is the caller's
 # to decide rather than the model's, and a model given filter parameters uses
 # them to exclude documents it should have read.

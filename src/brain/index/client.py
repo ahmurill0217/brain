@@ -1,5 +1,3 @@
-# Derived from onyx/document_index/opensearch/client.py and
-# onyx/document_index/opensearch/cluster_settings.py.
 """A thin, typed wrapper over opensearch-py.
 
 opensearch-py returns bare dicts from everything and reports per-item failures
@@ -7,9 +5,9 @@ inside a success response, so a caller that does not inspect the body cannot
 tell a partial write from a clean one. Every method here either returns the
 narrow thing brain needs or raises; nothing hands a raw response upward.
 
-Onyx's version also carries Prometheus metrics, point-in-time pagination, AWS
-SigV4 auth, and the reindex-port machinery. None of that applies here: brain
-authenticates with basic auth against one index and reads it back in one page.
+There are deliberately no Prometheus metrics, point-in-time pagination, AWS
+SigV4 auth, or reindex-port machinery here: brain authenticates with basic auth
+against one index and reads it back in one page.
 """
 
 from __future__ import annotations

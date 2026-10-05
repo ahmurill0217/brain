@@ -1,13 +1,14 @@
-"""Column date detection matches Onyx exactly.
+"""Column date detection is deliberately pinned.
 
 Whether a spreadsheet column reads as dates changes the descriptor chunks built
-for that sheet, which changes what retrieval can find. Onyx's behavior is the
-behavior we measured, so it is pinned here rather than improved on by accident.
+for that sheet, which changes what retrieval can find. The current behavior is
+the behavior we measured, so it is pinned here rather than improved on by
+accident.
 
 The loose case is the interesting one. `"10-20"` in a spreadsheet is more often
 a range than a date, and reading it as October 20th is arguably wrong. It is
-still what Onyx does, so it is what brain does. Changing it is a deliberate
-decision that starts by editing this file.
+still what brain does, on purpose. Changing it is a deliberate decision that
+starts by editing this file.
 """
 
 from __future__ import annotations
@@ -49,7 +50,7 @@ def test_the_cheap_guard_rejects_before_parsing() -> None:
 
 
 def test_loose_parsing_is_intentional() -> None:
-    """dateutil's guess for a bare day-month, kept for Onyx parity.
+    """dateutil's guess for a bare day-month, kept on purpose.
 
     If this test fails because someone tightened the parser, that is a real
     product decision and not a bug: the column typing it feeds is part of what

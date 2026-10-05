@@ -1,4 +1,3 @@
-# Derived from onyx/chat/citation_utils.py.
 """Citation bookkeeping around the processor.
 
 An answer assembled from several search rounds ends up citing [17] and [104]

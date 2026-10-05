@@ -1,12 +1,10 @@
-# Derived from onyx tests/unit/onyx/indexing/test_chunker.py.
 """The whole-document path: budget arithmetic, metadata, large chunks.
 
-Onyx ran these against a real e5-base-v2 tokenizer, which downloads from the
-network. brain uses the shared `FakeTokenizer` (one word, one token) instead.
-The counts work out the same for this document, so the assertions are Onyx's
-unchanged.
+These use the shared `FakeTokenizer` (one word, one token) rather than a real
+tokenizer, which would download from the network. The counts match what a real
+e5-base-v2 tokenizer produces for this document.
 
-Onyx's `test_chunker_heartbeat` is not ported: brain's Chunker has no callback.
+There is no heartbeat test: brain's Chunker has no callback.
 """
 
 from __future__ import annotations

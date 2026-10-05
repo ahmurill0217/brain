@@ -1,7 +1,6 @@
 # brain
 
-Document ingest, hybrid retrieval, and cited answering, extracted from
-[Onyx](https://github.com/onyx-dot-app/onyx-foss) and rebuilt as a library.
+Document ingest, hybrid retrieval, and cited answering, as a library.
 
 You hand it `Document` objects. It chunks them, embeds them, indexes them in
 OpenSearch, retrieves with hybrid search, and streams answers with inline
@@ -18,7 +17,6 @@ production corpus, and not yet deployed anywhere.
 | Source | 16,300 lines across 94 modules |
 | Tests | 14,900 lines, 873 unit + 9 end-to-end |
 | Architecture contracts | 4, enforced in CI-able form |
-| Onyx imports remaining | none |
 
 The end-to-end suite runs against real OpenSearch and real embeddings. Its
 retrieval cases use questions that share almost no vocabulary with the document
@@ -46,10 +44,9 @@ rather than keyword matching.
 Plus `model_server/`, a separate 550-line service that holds the embedding model
 and is the only thing in the repository that needs PyTorch.
 
-**What was deliberately left behind:** connectors, Celery, Redis, MinIO,
-multi-tenancy, the secondary-index rebuild path, reranking (Onyx's current
-retrieval has none), Vespa, deep research, web search, image generation, and
-Slack. Auth, connector scheduling, and the UI stay in the calling platform.
+**Deliberately out of scope:** connectors, Celery, Redis, MinIO,
+multi-tenancy, a secondary-index rebuild path, reranking, Vespa, deep research,
+web search, image generation, and Slack. Auth, connector scheduling, and the UI stay in the calling platform.
 
 ## Quick start
 
@@ -59,8 +56,7 @@ docker compose up -d
 
 OpenSearch, the embedding model server, and the brain API. The model server
 bakes its weights into the image, so after the first build it starts offline.
-Host ports default to 9201, 9100, and 8100 so the stack can run alongside an
-existing Onyx.
+Host ports default to 9201, 9100, and 8100 to stay clear of the usual defaults.
 
 In process:
 
@@ -97,7 +93,7 @@ Endpoints: `/v1/ingest`, `/v1/extract`, `/v1/documents/delete`, `/v1/search`,
 ## Things that will bite you otherwise
 
 **Documents are public by default.** A `Document` with no `external_access` is
-visible to every caller, which matches Onyx. If your corpus is not uniformly
+visible to every caller. If your corpus is not uniformly
 readable, set `BRAIN_DEFAULT_DOCUMENT_PUBLIC=false` and supply permissions at
 ingest. Access is enforced at query time from strings stored on each chunk, so a
 document indexed with the wrong permissions stays wrong until it is re-indexed.
@@ -120,7 +116,7 @@ which is also how you benchmark retrieval on its own.
 
 Everything lives in `BrainSettings`, populated from `BRAIN_`-prefixed environment
 variables and read exactly once. No module reads the environment on its own.
-Defaults match the Onyx configuration this was benchmarked against: 512-token
+Defaults match the configuration this was benchmarked against: 512-token
 chunks, no overlap, hybrid weights split evenly between vector and keyword, 500
 candidates, 50 hits retrieved, 25 sections reaching the model.
 
@@ -138,36 +134,30 @@ uv run lint-imports
 The unit suite runs offline. `external` needs OpenSearch and the model server;
 `e2e` needs the full compose stack and skips cleanly without it.
 
-`lint-imports` enforces the layering. It is worth keeping in CI: Onyx has real
-import cycles between indexing, retrieval, and the document index, and these
-contracts are what make inheriting them impossible rather than merely discouraged.
+`lint-imports` enforces the layering. It is worth keeping in CI: the
+contracts make import cycles between indexing, retrieval, and the document index
+impossible rather than merely discouraged.
 
 ## Next steps
 
 Roughly in the order they matter:
 
 1. **Point it at a real corpus.** Everything so far is synthetic or a handful of
-   papers. Ingest a few thousand real documents and compare retrieval against the
-   same corpus in Onyx before trusting it.
+   papers. Ingest a few thousand real documents and check retrieval quality before
+   trusting it.
 2. **Wire up identity.** The platform mints a short-lived token; brain maps it to
    an `AccessScope`. Until then the API is a shared key and every caller looks the
    same, which makes the per-document permissions decorative.
 3. **Make ingest asynchronous.** It is synchronous today, so a large batch holds
    an HTTP request open. The pipeline is already batched internally; it needs a
    queue in front of it.
-4. **Decide about reranking.** Onyx dropped the cross-encoder in favor of rank
-   fusion plus LLM narrowing. That is what brain does. Whether a reranker beats it
-   on your corpus is an experiment worth running.
-5. **Observability.** All the Onyx metrics and tracing were stripped. Something
-   should replace them before this runs unattended.
+4. **Decide about reranking.** brain uses rank fusion plus LLM narrowing rather
+   than a cross-encoder. Whether a reranker beats it on your corpus is an
+   experiment worth running.
+5. **Observability.** There are no metrics or tracing yet. Something
+   should be added before this runs unattended.
 6. **CI.** The commands above should run on every push.
 
 ## License
 
-MIT. Substantial portions derive from Onyx, also MIT. `LICENSE` carries both
-copyright lines, and `NOTICE.md` maps each ported module to its Onyx source.
-
-Ported modules also carry a one-line `# Derived from onyx/...` comment. That is
-not a licensing requirement, which the `LICENSE` file already satisfies. It is
-kept because it is a useful pointer: when brain's behavior needs comparing
-against upstream, the comment says exactly which file to open.
+MIT. See `LICENSE`.

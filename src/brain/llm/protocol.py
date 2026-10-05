@@ -1,4 +1,3 @@
-# Shape informed by onyx/llm/interfaces.py.
 """The LLM boundary.
 
 Everything in brain that talks to a model talks to this Protocol. It is two

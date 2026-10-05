@@ -1,5 +1,3 @@
-# Derived from onyx/natural_language_processing/search_nlp_models.py and
-# shared_configs/model_server_models.py.
 """The embedding boundary.
 
 nomic-embed is asymmetric: a query and a passage carrying the same words get

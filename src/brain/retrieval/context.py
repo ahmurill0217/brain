@@ -1,4 +1,3 @@
-# Derived from onyx/tools/tool_implementations/utils.py.
 """Rendering retrieved sections as the tool result the model reads.
 
 The payload is JSON rather than a text template. Models follow a schema more

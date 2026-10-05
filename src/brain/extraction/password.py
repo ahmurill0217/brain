@@ -1,4 +1,3 @@
-# Derived from onyx/file_processing/password_validation.py.
 """Is this file going to ask for a password?
 
 Worth knowing before extraction, because an encrypted file produces empty text

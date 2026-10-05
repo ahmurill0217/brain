@@ -1,10 +1,8 @@
-# Ported from onyx tests/unit/onyx/indexing/test_embed_chunks_in_batches.py.
 """Tests for spilling embedded chunks to disk.
 
-Onyx's version tests the indexing pipeline's batching loop, which brain has not
-built yet. What is portable today is the store underneath it, and in particular
-the cross-batch scrub: a document that succeeds in one batch and fails in the
-next must leave nothing behind.
+brain has not built the indexing pipeline's batching loop yet, so these cover
+the store underneath it, and in particular the cross-batch scrub: a document
+that succeeds in one batch and fails in the next must leave nothing behind.
 """
 
 from __future__ import annotations

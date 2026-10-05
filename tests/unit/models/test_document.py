@@ -111,8 +111,9 @@ def test_title_strips_the_section_separator() -> None:
     The separator is how enrichment marks where the title ends, so a title
     containing one would break the cleanup that strips the title back off.
     Each of the three characters is replaced individually, which is why the
-    result has three spaces rather than one. Ported from Onyx as-is: collapsing
-    them would change the embedded title text and invalidate existing indexes.
+    result has three spaces rather than one. This is pinned on purpose:
+    collapsing them would change the embedded title text and invalidate
+    existing indexes.
     """
     assert _doc(title="Multi\n\r\nLine").get_title_for_document_index() == "Multi   Line"
     assert _doc(title="  padded  ").get_title_for_document_index() == "padded"

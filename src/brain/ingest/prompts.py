@@ -1,4 +1,3 @@
-# Derived from onyx/prompts/contextual_retrieval.py.
 """Index-time prompts for contextual RAG.
 
 These live under `brain.ingest` rather than `brain.answer.prompts` because

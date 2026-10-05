@@ -13,7 +13,7 @@ The one exception is the first section of a titled document, which is kept even
 when empty so that the title itself still reaches the index and the document
 remains findable by name.
 
-Ported from Onyx unchanged. The practical consequence is worth stating plainly:
+The practical consequence is worth stating plainly:
 ingest a folder of image-heavy PDFs without a vision model and the figures are
 silently absent from the index. The surrounding body text is still indexed.
 """

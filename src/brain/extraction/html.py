@@ -1,4 +1,3 @@
-# Derived from onyx/file_processing/html_utils.py and onyx/file_processing/enums.py.
 """HTML to the flat text a chunker can read.
 
 Two parsers, on purpose. bs4 walks the tree and reproduces what a browser would

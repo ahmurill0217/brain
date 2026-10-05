@@ -1,4 +1,3 @@
-# Derived from onyx tests/unit/onyx/file_processing/test_detect_encoding.py.
 from __future__ import annotations
 
 from io import BytesIO

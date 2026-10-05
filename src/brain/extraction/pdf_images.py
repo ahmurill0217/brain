@@ -1,4 +1,3 @@
-# Derived from onyx/file_processing/pdf_image_utils.py.
 """Enumeration and filtering of embedded images in PDFs.
 
 Counting and extraction share one enumerator and one filter chain, so they can

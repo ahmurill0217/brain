@@ -1,4 +1,3 @@
-# Derived from onyx/prompts/tool_prompts.py.
 """Tool guidance appended to the system prompt.
 
 brain ships one tool, so only the search guidance survives the extraction. The
@@ -11,9 +10,9 @@ because a host that adds its own search tool still wants the generic half.
 TOOL_SECTION_HEADER = "\n# Tools\n\n"
 
 
-# Onyx's version carries a sentence about choosing between internal and web
-# search. brain has no web search, so it is dropped rather than left to describe
-# a tool the model will never be offered.
+# Says nothing about choosing between internal and web search: brain has no
+# web search, so the prompt does not describe a tool the model will never be
+# offered.
 TOOL_DESCRIPTION_SEARCH_GUIDANCE = """
 For questions that can be answered from existing knowledge, answer the user directly without using any tools. \
 If you suspect your knowledge is outdated or for topics where things are rapidly changing, use search tools to get more context. \

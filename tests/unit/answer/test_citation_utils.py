@@ -1,14 +1,14 @@
-# Derived from onyx tests/unit/onyx/chat/test_citation_utils.py.
-"""
-Unit tests for citation_utils module.
+"""Citation bookkeeping: renumbering, ordering, and joining search results.
 
-This module tests the collapse_citations function which renumbers citations
-in text to use the smallest possible numbers while respecting existing mappings.
+Mappings in the tables are written as {number: document_id}, and every case
+asserts the whole rewritten text and the whole resulting mapping.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
+
+import pytest
 
 from brain.answer.citation_processor import CitationMapping
 from brain.answer.citation_utils import (
@@ -18,550 +18,184 @@ from brain.answer.citation_utils import (
 )
 from brain.models.search import SearchDoc
 
-# ============================================================================
-# Helper Functions
-# ============================================================================
 
-
-def create_test_search_doc(
-    document_id: str = "test-doc-1",
-    link: str | None = "https://example.com/doc1",
-    chunk_ind: int = 0,
-    semantic_identifier: str = "Test Document",
-    blurb: str = "Test blurb",
-    source_type: str = "web",
-    boost: int = 1,
-    hidden: bool = False,
-    metadata: dict | None = None,
-    score: float | None = None,
-    match_highlights: list[str] | None = None,
-) -> SearchDoc:
-    """Create a test SearchDoc instance with default or custom values."""
+def make_doc(document_id: str) -> SearchDoc:
     return SearchDoc(
         document_id=document_id,
-        chunk_ind=chunk_ind,
-        semantic_identifier=semantic_identifier,
-        link=link,
-        blurb=blurb,
-        source_type=source_type,
-        boost=boost,
-        hidden=hidden,
-        metadata=metadata or {},
-        score=score,
-        match_highlights=match_highlights or [],
+        chunk_ind=0,
+        semantic_identifier=document_id,
+        link=f"https://example.com/{document_id}",
+        blurb="",
+        source_type="web",
+        boost=1,
+        hidden=False,
+        metadata={},
+        score=None,
+        match_highlights=[],
         updated_at=datetime.now(),
     )
 
 
-# ============================================================================
-# Basic Functionality Tests
-# ============================================================================
+def mapping_of(ids: dict[int, str]) -> CitationMapping:
+    return {num: make_doc(doc_id) for num, doc_id in ids.items()}
 
 
-class TestCollapseCitationsBasic:
-    """Basic functionality tests for collapse_citations."""
-
-    def test_empty_text_and_mappings(self) -> None:
-        """Test with empty text and empty mappings."""
-        text, mapping = collapse_citations("", {}, {})
-        assert text == ""
-        assert mapping == {}
-
-    def test_text_without_citations(self) -> None:
-        """Test text without any citations remains unchanged."""
-        input_text = "This is some text without any citations."
-        text, mapping = collapse_citations(input_text, {}, {})
-        assert text == input_text
-        assert mapping == {}
-
-    def test_empty_existing_mapping_starts_from_one(self) -> None:
-        """Test that with empty existing mapping, new citations start from 1."""
-        doc1 = create_test_search_doc(document_id="doc_50")
-        doc2 = create_test_search_doc(document_id="doc_60")
-        new_mapping: CitationMapping = {50: doc1, 60: doc2}
-
-        text, mapping = collapse_citations("See [50] and [60].", {}, new_mapping)
-
-        # Should start from 1 when existing mapping is empty
-        assert text == "See [1] and [2]."
-        assert set(mapping.keys()) == {1, 2}
-        assert mapping[1].document_id == "doc_50"
-        assert mapping[2].document_id == "doc_60"
-
-    def test_single_citation_no_existing(self) -> None:
-        """Test collapsing a single citation with no existing mappings."""
-        doc = create_test_search_doc(document_id="doc_25")
-        new_mapping: CitationMapping = {25: doc}
-
-        text, mapping = collapse_citations("See [25] for details.", {}, new_mapping)
-
-        assert text == "See [1] for details."
-        assert 1 in mapping
-        assert mapping[1].document_id == "doc_25"
-        assert len(mapping) == 1
-
-    def test_multiple_citations_no_existing(self) -> None:
-        """Test collapsing multiple citations with no existing mappings."""
-        doc1 = create_test_search_doc(document_id="doc_100")
-        doc2 = create_test_search_doc(document_id="doc_200")
-        doc3 = create_test_search_doc(document_id="doc_300")
-        new_mapping: CitationMapping = {100: doc1, 200: doc2, 300: doc3}
-
-        text, mapping = collapse_citations(
-            "See [100], [200], and [300].", {}, new_mapping
-        )
-
-        assert text == "See [1], [2], and [3]."
-        assert mapping[1].document_id == "doc_100"
-        assert mapping[2].document_id == "doc_200"
-        assert mapping[3].document_id == "doc_300"
-        assert len(mapping) == 3
-
-
-class TestCollapseCitationsWithExisting:
-    """Tests for collapse_citations with existing citation mappings."""
-
-    def test_continues_from_existing_mapping(self) -> None:
-        """Test that new citations start from the next available number."""
-        existing_doc = create_test_search_doc(document_id="existing_doc")
-        existing_mapping: CitationMapping = {1: existing_doc}
-
-        new_doc = create_test_search_doc(document_id="new_doc")
-        new_mapping: CitationMapping = {50: new_doc}
-
-        text, mapping = collapse_citations(
-            "See [50] for more.", existing_mapping, new_mapping
-        )
-
-        assert text == "See [2] for more."
-        assert 1 in mapping
-        assert 2 in mapping
-        assert mapping[1].document_id == "existing_doc"
-        assert mapping[2].document_id == "new_doc"
-        assert len(mapping) == 2
-
-    def test_reuses_existing_citation_for_same_document(self) -> None:
-        """Test that citations to existing documents use the existing number."""
-        doc = create_test_search_doc(document_id="shared_doc")
-        existing_mapping: CitationMapping = {1: doc}
-
-        # Same document referenced with a different citation number
-        new_doc = create_test_search_doc(document_id="shared_doc")
-        new_mapping: CitationMapping = {50: new_doc}
-
-        text, mapping = collapse_citations(
-            "See [50] again.", existing_mapping, new_mapping
-        )
-
-        assert text == "See [1] again."
-        assert len(mapping) == 1
-        assert mapping[1].document_id == "shared_doc"
-
-    def test_mixed_existing_and_new_documents(self) -> None:
-        """Test with a mix of existing and new documents."""
-        existing_doc1 = create_test_search_doc(document_id="doc_a")
-        existing_doc2 = create_test_search_doc(document_id="doc_b")
-        existing_mapping: CitationMapping = {1: existing_doc1, 2: existing_doc2}
-
-        # 30 refers to existing doc_a, 31 is new, 32 refers to existing doc_b
-        new_doc_a = create_test_search_doc(document_id="doc_a")
-        new_doc_c = create_test_search_doc(document_id="doc_c")
-        new_doc_b = create_test_search_doc(document_id="doc_b")
-        new_mapping: CitationMapping = {30: new_doc_a, 31: new_doc_c, 32: new_doc_b}
-
-        text, mapping = collapse_citations(
-            "Refs: [30], [31], [32].", existing_mapping, new_mapping
-        )
-
-        # [30] -> [1] (doc_a exists as 1)
-        # [31] -> [3] (doc_c is new, next available)
-        # [32] -> [2] (doc_b exists as 2)
-        assert text == "Refs: [1], [3], [2]."
-        assert len(mapping) == 3
-        assert mapping[1].document_id == "doc_a"
-        assert mapping[2].document_id == "doc_b"
-        assert mapping[3].document_id == "doc_c"
-
-    def test_existing_mapping_unchanged(self) -> None:
-        """Test that existing mapping values are not modified."""
-        existing_doc = create_test_search_doc(
-            document_id="existing", link="https://existing.com"
-        )
-        existing_mapping: CitationMapping = {5: existing_doc}
-
-        new_doc = create_test_search_doc(document_id="new_doc")
-        new_mapping: CitationMapping = {100: new_doc}
-
-        _text, mapping = collapse_citations("[100]", existing_mapping, new_mapping)
-
-        # Existing mapping should be preserved with its original key
-        assert 5 in mapping
-        assert mapping[5].document_id == "existing"
-        assert mapping[5].link == "https://existing.com"
-        # New citation should get next available number (6)
-        assert 6 in mapping
-        assert mapping[6].document_id == "new_doc"
-
-
-class TestCollapseCitationsMultipleCitations:
-    """Tests for multiple citation formats and edge cases."""
-
-    def test_same_citation_multiple_times(self) -> None:
-        """Test the same citation appearing multiple times in text."""
-        doc = create_test_search_doc(document_id="doc_25")
-        new_mapping: CitationMapping = {25: doc}
-
-        text, mapping = collapse_citations(
-            "[25] says X. Also [25] says Y.", {}, new_mapping
-        )
-
-        assert text == "[1] says X. Also [1] says Y."
-        assert len(mapping) == 1
-        assert mapping[1].document_id == "doc_25"
-
-    def test_comma_separated_citations(self) -> None:
-        """Test comma-separated citations like [1, 2, 3]."""
-        doc1 = create_test_search_doc(document_id="doc_10")
-        doc2 = create_test_search_doc(document_id="doc_20")
-        new_mapping: CitationMapping = {10: doc1, 20: doc2}
-
-        text, mapping = collapse_citations("[10, 20]", {}, new_mapping)
-
-        assert text == "[1, 2]"
-        assert len(mapping) == 2
-
-    def test_double_bracket_citations(self) -> None:
-        """Test double bracket citations like [[25]]."""
-        doc = create_test_search_doc(document_id="doc_25")
-        new_mapping: CitationMapping = {25: doc}
-
-        text, mapping = collapse_citations("See [[25]] for info.", {}, new_mapping)
-
-        assert text == "See [[1]] for info."
-        assert mapping[1].document_id == "doc_25"
-
-    def test_same_doc_different_old_numbers(self) -> None:
-        """Test same document appearing with different citation numbers."""
-        doc = create_test_search_doc(document_id="same_doc")
-        # Same document with two different citation numbers
-        new_mapping: CitationMapping = {
-            50: doc,
-            60: create_test_search_doc(document_id="same_doc"),
-        }
-
-        text, mapping = collapse_citations("[50] and [60]", {}, new_mapping)
-
-        # Both should map to the same new number
-        assert text == "[1] and [1]"
-        assert len(mapping) == 1
-        assert mapping[1].document_id == "same_doc"
-
-
-class TestCollapseCitationsUnicodeBrackets:
-    """Tests for unicode bracket variants."""
-
-    def test_unicode_brackets_chinese(self) -> None:
-        """Test Chinese-style brackets 【】."""
-        doc = create_test_search_doc(document_id="doc_25")
-        new_mapping: CitationMapping = {25: doc}
-
-        text, mapping = collapse_citations("See 【25】 for details.", {}, new_mapping)
-
-        assert text == "See 【1】 for details."
-        assert mapping[1].document_id == "doc_25"
-
-    def test_unicode_brackets_fullwidth(self) -> None:
-        """Test the fullwidth bracket variant."""
-        doc = create_test_search_doc(document_id="doc_25")
-        new_mapping: CitationMapping = {25: doc}
-
-        text, mapping = collapse_citations("See ［25］ for details.", {}, new_mapping)  # noqa: RUF001
-
-        assert text == "See ［1］ for details."  # noqa: RUF001
-        assert mapping[1].document_id == "doc_25"
-
-    def test_double_unicode_brackets(self) -> None:
-        """Test double unicode brackets 【【25】】."""
-        doc = create_test_search_doc(document_id="doc_25")
-        new_mapping: CitationMapping = {25: doc}
-
-        text, mapping = collapse_citations("See 【【25】】 for info.", {}, new_mapping)
-
-        assert text == "See 【【1】】 for info."
-        assert mapping[1].document_id == "doc_25"
-
-
-class TestCollapseCitationsEdgeCases:
-    """Edge case tests for collapse_citations."""
-
-    def test_citation_not_in_mapping(self) -> None:
-        """Test citations in text that aren't in the new mapping are preserved."""
-        doc = create_test_search_doc(document_id="doc_25")
-        new_mapping: CitationMapping = {25: doc}
-
-        # [99] is not in the mapping, should remain unchanged
-        text, mapping = collapse_citations("[25] and [99]", {}, new_mapping)
-
-        assert text == "[1] and [99]"
-        assert len(mapping) == 1
-
-    def test_non_sequential_existing_mapping(self) -> None:
-        """Test with non-sequential existing mapping numbers."""
-        existing_mapping: CitationMapping = {
-            5: create_test_search_doc(document_id="doc_5"),
-            10: create_test_search_doc(document_id="doc_10"),
-        }
-
-        new_doc = create_test_search_doc(document_id="new_doc")
-        new_mapping: CitationMapping = {99: new_doc}
-
-        text, mapping = collapse_citations("[99]", existing_mapping, new_mapping)
-
-        # Next available should be max(5, 10) + 1 = 11
-        assert text == "[11]"
-        assert 5 in mapping
-        assert 10 in mapping
-        assert 11 in mapping
-        assert len(mapping) == 3
-
-    def test_preserves_text_around_citations(self) -> None:
-        """Test that text around citations is preserved exactly."""
-        doc = create_test_search_doc(document_id="doc_1")
-        new_mapping: CitationMapping = {100: doc}
-
-        input_text = "According to the source [100], this is true.\n\nNext paragraph."
-        text, _mapping = collapse_citations(input_text, {}, new_mapping)
-
-        assert text == "According to the source [1], this is true.\n\nNext paragraph."
-
-    def test_citation_at_start_of_text(self) -> None:
-        """Test citation at the very start of text."""
-        doc = create_test_search_doc(document_id="doc_1")
-        new_mapping: CitationMapping = {50: doc}
-
-        text, _mapping = collapse_citations("[50] is the answer.", {}, new_mapping)
-
-        assert text == "[1] is the answer."
-
-    def test_citation_at_end_of_text(self) -> None:
-        """Test citation at the very end of text."""
-        doc = create_test_search_doc(document_id="doc_1")
-        new_mapping: CitationMapping = {50: doc}
-
-        text, _mapping = collapse_citations("The answer is [50]", {}, new_mapping)
-
-        assert text == "The answer is [1]"
-
-    def test_adjacent_citations(self) -> None:
-        """Test citations immediately adjacent to each other."""
-        doc1 = create_test_search_doc(document_id="doc_1")
-        doc2 = create_test_search_doc(document_id="doc_2")
-        new_mapping: CitationMapping = {50: doc1, 60: doc2}
-
-        text, _mapping = collapse_citations("[50][60]", {}, new_mapping)
-
-        assert text == "[1][2]"
-
-    def test_empty_new_mapping_with_existing(self) -> None:
-        """Test with existing mapping but no new citations to process."""
-        existing_doc = create_test_search_doc(document_id="existing")
-        existing_mapping: CitationMapping = {1: existing_doc}
-
-        text, mapping = collapse_citations("No citations here.", existing_mapping, {})
-
-        assert text == "No citations here."
-        assert mapping == existing_mapping
-
-
-class TestCollapseCitationsOrdering:
-    """Tests for citation ordering behavior."""
-
-    def test_assigns_numbers_in_order_of_appearance(self) -> None:
-        """Test that new numbers are assigned based on order in new_mapping iteration."""
-        doc1 = create_test_search_doc(document_id="doc_a")
-        doc2 = create_test_search_doc(document_id="doc_b")
-        doc3 = create_test_search_doc(document_id="doc_c")
-        # Note: dict order is preserved in Python 3.7+
-        new_mapping: CitationMapping = {300: doc1, 100: doc2, 200: doc3}
-
-        text, mapping = collapse_citations("[300] [100] [200]", {}, new_mapping)
-
-        # The mapping iteration order determines assignment:
-        # 300 -> 1 (first in new_mapping)
-        # 100 -> 2 (second in new_mapping)
-        # 200 -> 3 (third in new_mapping)
-        assert mapping[1].document_id == "doc_a"
-        assert mapping[2].document_id == "doc_b"
-        assert mapping[3].document_id == "doc_c"
-        assert text == "[1] [2] [3]"
-
-    def test_multiple_existing_citations_preserved(self) -> None:
-        """Test that all existing citations are preserved in output mapping."""
-        existing_mapping: CitationMapping = {
-            1: create_test_search_doc(document_id="doc_1"),
-            2: create_test_search_doc(document_id="doc_2"),
-            3: create_test_search_doc(document_id="doc_3"),
-        }
-
-        new_doc = create_test_search_doc(document_id="new_doc")
-        new_mapping: CitationMapping = {99: new_doc}
-
-        text, mapping = collapse_citations("[99]", existing_mapping, new_mapping)
-
-        assert text == "[4]"
-        # All existing plus the new one
-        assert len(mapping) == 4
-        assert mapping[1].document_id == "doc_1"
-        assert mapping[2].document_id == "doc_2"
-        assert mapping[3].document_id == "doc_3"
-        assert mapping[4].document_id == "new_doc"
-
-
-class TestCollapseCitationsComplexScenarios:
-    """Complex real-world scenario tests."""
-
-    def test_research_agent_scenario(self) -> None:
-        """Test a realistic research agent scenario with multiple tool calls."""
-        # First search returned citations 1-5
-        existing_mapping: CitationMapping = {
-            1: create_test_search_doc(document_id="wiki_python"),
-            2: create_test_search_doc(document_id="docs_typing"),
-            3: create_test_search_doc(document_id="blog_best_practices"),
-        }
-
-        # Second search returned citations starting at 100 (to avoid conflicts)
-        # Some docs are the same as before
-        new_mapping: CitationMapping = {
-            100: create_test_search_doc(document_id="wiki_python"),  # Same as 1
-            101: create_test_search_doc(document_id="new_tutorial"),  # New
-            102: create_test_search_doc(document_id="docs_typing"),  # Same as 2
-            103: create_test_search_doc(document_id="another_new"),  # New
-        }
-
-        text, mapping = collapse_citations(
-            "According to [100] and [101], also see [102] and [103].",
-            existing_mapping,
-            new_mapping,
-        )
-
-        # [100] -> [1] (wiki_python exists as 1)
-        # [101] -> [4] (new_tutorial is new, next after 3)
-        # [102] -> [2] (docs_typing exists as 2)
-        # [103] -> [5] (another_new is new)
-        assert text == "According to [1] and [4], also see [2] and [5]."
-        assert len(mapping) == 5
-        assert mapping[1].document_id == "wiki_python"
-        assert mapping[2].document_id == "docs_typing"
-        assert mapping[3].document_id == "blog_best_practices"
-        assert mapping[4].document_id == "new_tutorial"
-        assert mapping[5].document_id == "another_new"
-
-    def test_long_text_with_many_citations(self) -> None:
-        """Test processing longer text with many citations."""
-        # Create docs for citations 50-55
-        new_mapping: CitationMapping = {
-            i: create_test_search_doc(document_id=f"doc_{i}") for i in range(50, 56)
-        }
-
-        text = """
-        This is a comprehensive document with multiple citations.
-
-        First, we discuss [50] which provides background information.
-        Then [51] and [52] offer contrasting viewpoints.
-
-        The middle section references [53] extensively, as seen here [53].
-
-        Finally, [54] and [55] conclude the analysis. Note that [50]
-        is referenced again for context.
-        """
-
-        result_text, mapping = collapse_citations(text, {}, new_mapping)
-
-        # All 50-55 should be collapsed to 1-6
-        assert "[1]" in result_text
-        assert "[2]" in result_text
-        assert "[3]" in result_text
-        assert "[4]" in result_text
-        assert "[5]" in result_text
-        assert "[6]" in result_text
-        # Original numbers should not appear
-        assert "[50]" not in result_text
-        assert "[51]" not in result_text
-        assert len(mapping) == 6
+def ids_of(mapping: CitationMapping) -> dict[int, str]:
+    return {num: doc.document_id for num, doc in mapping.items()}
 
 
 # ============================================================================
-# extract_citation_order_from_text (no upstream coverage)
+# collapse_citations
 # ============================================================================
 
 
-class TestExtractCitationOrder:
-    """Tests for extract_citation_order_from_text."""
+@pytest.mark.parametrize(
+    ("existing", "new", "text", "expected_text", "expected_mapping"),
+    [
+        pytest.param({}, {}, "", "", {}, id="empty"),
+        pytest.param({}, {}, "No sources.", "No sources.", {}, id="no-citations"),
+        pytest.param({1: "a"}, {}, "No sources.", "No sources.", {1: "a"}, id="nothing-new"),
+        # Numbering
+        pytest.param(
+            {},
+            {50: "a", 60: "b"},
+            "See [50] and [60].",
+            "See [1] and [2].",
+            {1: "a", 2: "b"},
+            id="starts-at-one",
+        ),
+        pytest.param(
+            {5: "a", 10: "b"},
+            {99: "c"},
+            "[99]",
+            "[11]",
+            {5: "a", 10: "b", 11: "c"},
+            id="continues-after-highest-existing",
+        ),
+        # New numbers follow the mapping's order, not the text's.
+        pytest.param(
+            {},
+            {300: "a", 100: "b", 200: "c"},
+            "[100] [200] [300]",
+            "[2] [3] [1]",
+            {1: "a", 2: "b", 3: "c"},
+            id="mapping-order-not-text-order",
+        ),
+        # The same document never takes two numbers.
+        pytest.param(
+            {1: "a", 2: "b", 3: "c"},
+            {100: "a", 101: "d", 102: "b", 103: "e"},
+            "See [100] and [101], also [102] and [103].",
+            "See [1] and [4], also [2] and [5].",
+            {1: "a", 2: "b", 3: "c", 4: "d", 5: "e"},
+            id="reuses-existing-numbers",
+        ),
+        pytest.param(
+            {},
+            {50: "a", 60: "a"},
+            "[50] and [60]",
+            "[1] and [1]",
+            {1: "a"},
+            id="one-doc-under-two-old-numbers",
+        ),
+        # A number with no mapping belongs to another numbering space.
+        pytest.param(
+            {}, {25: "a"}, "[25] and [99]", "[1] and [99]", {1: "a"}, id="unmapped-untouched"
+        ),
+        # Every occurrence is rewritten, and the text around it is not.
+        pytest.param(
+            {},
+            {25: "a"},
+            "[25] says X.\n\nAlso [25] says Y.",
+            "[1] says X.\n\nAlso [1] says Y.",
+            {1: "a"},
+            id="every-occurrence",
+        ),
+        pytest.param({}, {50: "a", 60: "b"}, "[50][60]", "[1][2]", {1: "a", 2: "b"}, id="adjacent"),
+        # Each bracket form keeps its own brackets.
+        pytest.param({}, {10: "a", 20: "b"}, "[10, 20]", "[1, 2]", {1: "a", 2: "b"}, id="group"),
+        pytest.param(
+            {}, {10: "a", 20: "b"}, "[10,20]", "[1, 2]", {1: "a", 2: "b"}, id="group-respaced"
+        ),
+        pytest.param({}, {25: "a"}, "See [[25]].", "See [[1]].", {1: "a"}, id="double"),
+        pytest.param({}, {25: "a"}, "See 【25】.", "See 【1】.", {1: "a"}, id="lenticular"),
+        pytest.param(
+            {}, {25: "a"}, "See 【【25】】.", "See 【【1】】.", {1: "a"}, id="double-lenticular"
+        ),
+        pytest.param({}, {25: "a"}, "See ［25］.", "See ［1］.", {1: "a"}, id="fullwidth"),  # noqa: RUF001
+    ],
+)
+def test_collapse_citations(
+    existing: dict[int, str],
+    new: dict[int, str],
+    text: str,
+    expected_text: str,
+    expected_mapping: dict[int, str],
+) -> None:
+    result_text, result_mapping = collapse_citations(text, mapping_of(existing), mapping_of(new))
 
-    def test_no_citations(self) -> None:
-        assert extract_citation_order_from_text("Plain text, no sources.") == []
+    assert result_text == expected_text
+    assert ids_of(result_mapping) == expected_mapping
 
-    def test_order_of_first_appearance(self) -> None:
-        assert extract_citation_order_from_text("See [3], then [1], then [3].") == [3, 1]
 
-    def test_comma_separated_group(self) -> None:
-        assert extract_citation_order_from_text("Both [2, 1] agree.") == [2, 1]
+def test_collapse_leaves_the_existing_mapping_alone() -> None:
+    """Numbers already shown to the reader must keep pointing where they did:
+    the same objects, and the caller's dict not mutated."""
+    existing = mapping_of({5: "a"})
+    original = dict(existing)
 
-    def test_spaces_inside_group(self) -> None:
-        assert extract_citation_order_from_text("Both [ 2 , 1 ] agree.") == []
-        assert extract_citation_order_from_text("Both [2 , 1] agree.") == [2, 1]
+    _, result = collapse_citations("[100]", existing, mapping_of({100: "b"}))
 
-    def test_double_bracket_form(self) -> None:
-        assert extract_citation_order_from_text("As shown [[7]].") == [7]
-
-    def test_unicode_bracket_forms(self) -> None:
-        assert extract_citation_order_from_text("【4】 and ［5］") == [4, 5]  # noqa: RUF001
-
-    def test_mixed_forms_deduplicated(self) -> None:
-        text = "First [1], again [[1]], then [2, 3], then 【2】"
-        assert extract_citation_order_from_text(text) == [1, 2, 3]
+    assert existing == original
+    assert result[5] is original[5]
+    assert ids_of(result) == {5: "a", 6: "b"}
 
 
 # ============================================================================
-# citation_mapping_from_search_result (brain-shaped replacement)
+# extract_citation_order_from_text
 # ============================================================================
 
 
-class TestCitationMappingFromSearchResult:
-    """Tests for joining a search response's numbers to its SearchDocs."""
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        pytest.param("Plain text, no sources.", [], id="none"),
+        pytest.param("See [3], then [1], then [3].", [3, 1], id="first-appearance"),
+        pytest.param("Both [2, 1] agree.", [2, 1], id="group"),
+        pytest.param("Both [2 , 1] agree.", [2, 1], id="space-before-comma"),
+        # Not a citation: the bracket must hug the first number.
+        pytest.param("Both [ 2 , 1 ] agree.", [], id="padded-brackets"),
+        pytest.param("As shown [[7]].", [7], id="double"),
+        pytest.param("【4】 and ［5］", [4, 5], id="unicode"),  # noqa: RUF001
+        pytest.param("[1], [[1]], [2, 3], 【2】", [1, 2, 3], id="mixed-deduplicated"),
+    ],
+)
+def test_extract_citation_order(text: str, expected: list[int]) -> None:
+    assert extract_citation_order_from_text(text) == expected
 
-    def test_joins_numbers_to_docs(self) -> None:
-        doc_a = create_test_search_doc(document_id="doc_a")
-        doc_b = create_test_search_doc(document_id="doc_b")
 
-        mapping = citation_mapping_from_search_result(
-            {1: "doc_a", 2: "doc_b"}, [doc_a, doc_b]
-        )
+# ============================================================================
+# citation_mapping_from_search_result
+# ============================================================================
 
-        assert mapping == {1: doc_a, 2: doc_b}
 
-    def test_unknown_document_id_is_dropped(self) -> None:
-        """A number whose document is missing must not resolve to a wrong doc."""
-        doc_a = create_test_search_doc(document_id="doc_a")
+@pytest.mark.parametrize(
+    ("numbers", "doc_ids", "expected"),
+    [
+        pytest.param({}, [], {}, id="empty"),
+        pytest.param({1: "a", 42: "b"}, ["a", "b"], {1: "a", 42: "b"}, id="joins-by-id"),
+        # A number whose document is missing must not resolve to a wrong one.
+        pytest.param({1: "a", 2: "missing"}, ["a"], {1: "a"}, id="unknown-dropped"),
+        # Both resolve; collapse_citations is what folds them together.
+        pytest.param({1: "a", 4: "a"}, ["a"], {1: "a", 4: "a"}, id="two-numbers-one-doc"),
+    ],
+)
+def test_citation_mapping_from_search_result(
+    numbers: dict[int, str], doc_ids: list[str], expected: dict[int, str]
+) -> None:
+    docs = [make_doc(doc_id) for doc_id in doc_ids]
 
-        mapping = citation_mapping_from_search_result({1: "doc_a", 2: "missing"}, [doc_a])
+    mapping = citation_mapping_from_search_result(numbers, docs)
 
-        assert mapping == {1: doc_a}
-
-    def test_preserves_non_sequential_numbers(self) -> None:
-        doc = create_test_search_doc(document_id="doc_a")
-
-        mapping = citation_mapping_from_search_result({42: "doc_a"}, [doc])
-
-        assert mapping == {42: doc}
-
-    def test_empty_inputs(self) -> None:
-        assert citation_mapping_from_search_result({}, []) == {}
-
-    def test_two_numbers_for_one_document(self) -> None:
-        """Both numbers resolve; collapse_citations is what folds them together."""
-        doc = create_test_search_doc(document_id="doc_a")
-
-        mapping = citation_mapping_from_search_result({1: "doc_a", 4: "doc_a"}, [doc])
-
-        assert mapping == {1: doc, 4: doc}
+    assert ids_of(mapping) == expected
+    assert all(mapping[n] is docs[doc_ids.index(d)] for n, d in expected.items())

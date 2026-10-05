@@ -1,5 +1,3 @@
-# Derived from onyx/indexing/indexing_pipeline.py (add_contextual_summaries,
-# add_document_summaries, add_chunk_summaries).
 """Index-time summaries that tell a chunk where it came from.
 
 A chunk pulled out of the middle of a document loses its referents: "the second
@@ -16,10 +14,9 @@ Both are expensive — one call per document plus one per chunk — which is why
 `enable_contextual_rag` is off by default. A failed call leaves the summary
 empty rather than failing the document: a chunk without context still indexes.
 
-Onyx routes the chunk prompt through a prompt-cache processor that splits it
-into a cacheable prefix and a suffix. That is dropped here: the saving belongs
-to a provider-specific caching layer, and plain concatenation produces the same
-prompt text.
+The chunk prompt is not split into a cacheable prefix and suffix for a
+prompt-cache processor: the saving belongs to a provider-specific caching
+layer, and plain concatenation produces the same prompt text.
 """
 
 from __future__ import annotations

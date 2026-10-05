@@ -1,5 +1,3 @@
-# Derived from onyx/indexing/indexing_pipeline.py (IndexingPipelineResult) and
-# onyx/tools/tool_implementations/search/search_tool.py (ToolResponse).
 """What a whole ingest, search, or answer hands back.
 
 These sit in `models` rather than next to the pipelines that build them because

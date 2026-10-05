@@ -1,8 +1,7 @@
-# Derived from onyx tests/unit/onyx/file_processing/test_image_utils.py.
 """The image callback, which in brain returns bytes instead of a file-store id.
 
-Onyx's version could only be tested with the store mocked out. Here the section
-carries the bytes, so the assertions are about the real object.
+The section carries the bytes, so no store needs mocking and the assertions are
+about the real object.
 """
 
 from __future__ import annotations

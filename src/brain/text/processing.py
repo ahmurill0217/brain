@@ -1,4 +1,3 @@
-# Derived from onyx/utils/text_processing.py.
 """String cleaning used on both the index and query sides.
 
 These have to agree: text is cleaned before embedding and the same cleaning is

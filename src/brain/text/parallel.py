@@ -1,12 +1,11 @@
-# Derived from onyx/utils/threadpool_concurrency.py.
 """Run independent calls concurrently.
 
 Used in three places where the work is I/O bound and embarrassingly parallel:
 embedding requests, image summarization, and the query variants of a search.
 Threads are the right tool because every one of those blocks on a socket.
 
-Onyx's version also propagates contextvars for tenant-scoped DB sessions. brain
-has neither, so this is just the pool.
+There are no tenants or scoped DB sessions to carry over via contextvars, so
+this is just the pool.
 """
 
 from __future__ import annotations

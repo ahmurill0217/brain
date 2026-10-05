@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunker.py.
 """Documents in, chunks out.
 
 The token budget is the whole problem. A chunk has to fit the embedding model's
@@ -15,8 +14,8 @@ pieces back when there is not enough:
   3. if it is still under, the title prefix and metadata go entirely, on the
      grounds that a full chunk of text beats a truncated one with a nice header
 
-Onyx reads these as module-level constants; every one of them is on `settings`
-here, so two Chunkers with different budgets can exist in one process.
+None of these are module-level constants; every one of them is on `settings`,
+so two Chunkers with different budgets can exist in one process.
 """
 
 from __future__ import annotations

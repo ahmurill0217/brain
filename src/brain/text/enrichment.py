@@ -1,4 +1,3 @@
-# Derived from onyx/document_index/chunk_content_enrichment.py.
 """Chunk text augmentation, and its inverse.
 
 A chunk is not indexed as the raw document text. Title, metadata, and the
@@ -88,7 +87,7 @@ def cleanup_content_for_chunks(
     front), then the metadata suffix (at the back), then the contextual-RAG
     summaries (which wrap what is left).
 
-    Mutates the inputs, as Onyx does; callers pass freshly parsed chunks.
+    Mutates the inputs; callers pass freshly parsed chunks.
     """
     for chunk in chunks:
         chunk.content = _remove_title(chunk, blurb_size)

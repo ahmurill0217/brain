@@ -1,4 +1,3 @@
-# Derived from onyx/access/models.py and onyx/access/utils.py.
 """Access control.
 
 Two directions, and they must agree or search silently returns the wrong rows:
@@ -17,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from brain.constants import EXTERNAL_GROUP_PREFIX, USER_EMAIL_PREFIX
 
-# Guard rail from Onyx: a permission set larger than this is almost always a bug
+# Guard rail: a permission set larger than this is almost always a bug
 # in the caller's permission sync, and it blows up the index document size.
 MAX_ACL_ENTRIES = 5000
 
@@ -84,7 +83,7 @@ class ExternalAccess(BaseModel):
 
 
 class AccessScope(BaseModel):
-    """Who is asking. Replaces Onyx's ORM User in every query path."""
+    """Who is asking. Used in place of an ORM user in every query path."""
 
     user_email: str | None = None
     external_group_ids: list[str] = Field(default_factory=list)
@@ -124,8 +123,8 @@ def acl_for_document(
 ) -> tuple[bool, list[str]]:
     """Split a document's access into (is_public, sorted acl strings).
 
-    `external_access=None` means the caller did not supply permissions. Onyx
-    treats that as public; `default_public` makes that choice explicit so a
+    `external_access=None` means the caller did not supply permissions.
+    Whether that is public is a choice; `default_public` makes it explicit so a
     deployment can fail closed instead.
     """
     if external_access is None:

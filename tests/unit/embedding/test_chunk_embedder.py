@@ -1,8 +1,6 @@
-# Ported from onyx tests/unit/onyx/indexing/test_embedder.py.
 """Tests for turning chunks into embedded chunks.
 
-Onyx's version patches the embedding model and asserts on the mock's calls. Here
-the embedder is a parameter, so `FakeEmbedder` records the same calls with no
+The embedder is a parameter, so `FakeEmbedder` records its calls with no
 patching at all, and `FakeEmbedder.calls` is what the assertions read.
 """
 

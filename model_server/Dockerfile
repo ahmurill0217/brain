@@ -1,5 +1,4 @@
 # MIT License. Copyright (c) 2023-present DanswerAI, Inc.; Copyright (c) 2026 Angel Murillo.
-# Derived from onyx backend/Dockerfile.model_server.
 #
 # Build context is this directory:  docker build -t brain-model-server model_server
 #
@@ -69,8 +68,7 @@ SentenceTransformer(model_name_or_path='nomic-ai/nomic-embed-text-v1', trust_rem
 FROM ${PYTHON_IMAGE} AS final
 
 LABEL org.opencontainers.image.title="brain model server"
-LABEL org.opencontainers.image.description="Embedding model server for brain. MIT licensed; \
-substantial portions derived from Onyx (https://github.com/onyx-dot-app/onyx-foss)."
+LABEL org.opencontainers.image.description="Embedding model server for brain. MIT licensed."
 LABEL org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app

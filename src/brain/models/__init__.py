@@ -2,7 +2,7 @@
 
 Every other package depends on this one and it depends on nothing but pydantic.
 That is what keeps `index`, `chunking`, and `embedding` from importing each
-other, which is the cycle Onyx has.
+other and forming a cycle.
 """
 
 from brain.models.acl import (

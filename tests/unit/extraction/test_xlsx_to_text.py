@@ -1,4 +1,3 @@
-# Derived from onyx tests/unit/onyx/file_processing/test_xlsx_to_text.py.
 from __future__ import annotations
 
 import io

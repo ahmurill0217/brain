@@ -1,4 +1,3 @@
-# Derived from onyx tests/unit/onyx/file_processing/fixtures/generate_image_fixtures.py.
 """Regenerates the image-bearing PDF fixtures in this directory.
 
 Run from this directory: ``uv run python generate_image_fixtures.py``

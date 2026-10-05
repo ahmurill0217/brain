@@ -1,4 +1,3 @@
-# Derived from onyx/llm/models.py and onyx/llm/model_response.py.
 """LLM message and response types.
 
 These mirror the OpenAI chat-completions shape because every provider worth

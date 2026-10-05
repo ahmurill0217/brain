@@ -1,9 +1,7 @@
-# Derived from onyx/indexing/embedder.py (DefaultIndexingEmbedder, embed_chunks_with_failure_handling).
 """Chunks in, chunks with vectors out.
 
-Onyx wraps this in an `IndexingEmbedder` class hierarchy whose only job is to
-own an `EmbeddingModel`. Here the embedder is a parameter, so these are plain
-functions and a test can pass `FakeEmbedder`.
+The embedder is a parameter rather than something a class hierarchy owns, so
+these are plain functions and a test can pass `FakeEmbedder`.
 
 Three things make this more than a map over `embedder.embed`:
 

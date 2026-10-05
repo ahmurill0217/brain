@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunking/section_chunker.py.
 """The section-chunker contract.
 
 A document is a sequence of sections of different kinds, and each kind has to be
@@ -51,9 +50,9 @@ class ChunkPayload(BaseModel):
 
     text: str
     links: dict[int, str]
-    # True when this piece continues a section that had to be split. Onyx also
-    # copied it onto the chunk itself; brain's DocAwareChunk drops it because
-    # nothing downstream reads it, so it stays a payload-local ordering signal.
+    # True when this piece continues a section that had to be split. It is not
+    # copied onto DocAwareChunk because nothing downstream reads it, so it stays
+    # a payload-local ordering signal.
     is_continuation: bool = False
     image_file_id: str | None = None
 

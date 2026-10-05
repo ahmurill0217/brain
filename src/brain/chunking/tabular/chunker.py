@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunking/tabular_section_chunker/tabular_section_chunker.py.
 """Tabular sections.
 
 A sheet chunked as prose retrieves badly: split it on sentence boundaries and a
@@ -13,9 +12,8 @@ Three kinds of chunk come out of one section:
   descriptor    what the sheet contains (see sheet_descriptor)
   totals        what the numbers add up to (see total_descriptor)
 
-Onyx read the staged CSV from a file store. brain has no file store: a section
-carries `csv_text` inline, or a `csv_file_id` the caller's `blob_reader`
-resolves. Either way the text is wrapped in a StringIO and streamed a row at a
+brain has no file store to stage the CSV in: a section carries `csv_text`
+inline, or a `csv_file_id` the caller's `blob_reader` resolves. Either way the text is wrapped in a StringIO and streamed a row at a
 time, so parsing a million-row sheet never builds a million-row list. `newline=""`
 is required, not cosmetic: it is what splits rows on a bare CR, which is how
 older Mac exports end their lines.

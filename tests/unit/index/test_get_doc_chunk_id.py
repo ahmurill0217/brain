@@ -1,4 +1,3 @@
-# Derived from tests/unit/onyx/document_index/opensearch/test_get_doc_chunk_id.py.
 """The chunk id is the index's primary key, so its exact shape is format.
 
 If it ever changed, a re-index would write new chunks alongside the old ones
@@ -59,8 +58,8 @@ class TestGetOpensearchDocChunkId:
         assert len(result.encode("utf-8")) < MAX_DOCUMENT_ID_ENCODED_LENGTH
 
     def test_no_tenant_prefix(self) -> None:
-        """brain has no tenancy, so the id starts with the document id itself.
-        Onyx prefixed a short tenant id here."""
+        """brain has no tenancy, so the id starts with the document id itself
+        rather than a tenant prefix."""
         assert get_opensearch_doc_chunk_id("mydoc", chunk_index=0).startswith("mydoc__")
 
 

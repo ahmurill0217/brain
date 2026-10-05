@@ -1,12 +1,10 @@
-# Derived from onyx/connectors/models.py and
-# onyx/connectors/cross_connector_utils/miscellaneous_utils.py.
 """The ingest contract.
 
 A `Document` is what the caller hands brain. Everything downstream (chunking,
 embedding, indexing) speaks this type and nothing else, which is what lets brain
 work without connectors: your platform produces Documents however it likes.
 
-Differences from Onyx's version, all deliberate:
+Deliberate design choices:
   - `source` is a free string, not an enum of 50 connector names.
   - Image bytes and tabular CSV can be carried inline, so there is no file store.
   - Hierarchy, ingestion-api, and file-id fields are gone.

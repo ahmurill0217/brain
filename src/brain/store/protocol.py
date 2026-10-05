@@ -1,5 +1,3 @@
-# Semantics derived from onyx/indexing/indexing_pipeline.py (index_doc_batch_prepare)
-# and onyx/indexing/adapters/document_indexing_adapter.py.
 """Document metadata store.
 
 OpenSearch holds the chunks. This holds the small amount of per-document
@@ -10,9 +8,8 @@ bookkeeping that retrieval does not need but re-ingest does:
     chunks behind
   - the manual boost, which survives re-indexing
 
-Onyx keeps all of this in Postgres alongside forty other tables. Here it is one
-protocol with two reference implementations, so a Django app can back it with
-its own models instead.
+It is one protocol with two reference implementations, so a Django app can
+back it with its own models instead.
 """
 
 from __future__ import annotations

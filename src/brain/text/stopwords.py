@@ -1,4 +1,3 @@
-# Derived from onyx/natural_language_processing/english_stopwords.py.
 """English stopword list, used to build the BM25 half of a hybrid query.
 
 The keyword subquery searches the stopword-stripped text while the vector

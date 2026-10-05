@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/vector_db_insertion.py.
 """Write a batch of chunks to the index, isolating whichever document breaks it.
 
 One bulk write is far cheaper than one write per document, and almost every

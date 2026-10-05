@@ -1,4 +1,3 @@
-# Derived from onyx/utils/isolated_runner.py.
 """Child entry point for `run_in_isolated_process`.
 
 Reads a pickled (callable, args, kwargs) from stdin, runs it, and writes the

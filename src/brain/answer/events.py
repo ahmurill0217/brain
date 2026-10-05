@@ -1,4 +1,3 @@
-# Derived from onyx/server/query_and_chat/streaming_models.py.
 """What an answer emits as it runs.
 
 This is the public contract. `Brain.answer` yields these, the HTTP API writes
@@ -8,8 +7,8 @@ optional fields.
 
 Every event is a pydantic model discriminated on `type`, which is what lets a
 client parse a line without guessing and what keeps `model_dump_json` round
--trippable. Onyx has forty of these for a chat UI with image generation, code
-execution and web search; brain has one tool, so it has eight.
+-trippable. brain has one tool, so it has eight; there are no events for image
+generation, code execution or web search.
 
 The pairing of `SearchStarted` and `SearchQueries` is not redundant. The first
 carries what the model asked for, and arrives before the search runs — that is

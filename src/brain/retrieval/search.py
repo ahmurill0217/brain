@@ -1,5 +1,3 @@
-# Derived from onyx/context/search/retrieval/search_runner.py and
-# onyx/context/search/pipeline.py.
 """One query against the index.
 
 Two jobs, both small, both easy to get wrong in ways that are invisible:

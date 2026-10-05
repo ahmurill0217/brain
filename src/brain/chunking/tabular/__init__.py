@@ -1,4 +1,3 @@
-# Derived from onyx/indexing/chunking/tabular_section_chunker/__init__.py.
 """Chunking for spreadsheets and CSVs."""
 
 from brain.chunking.tabular.analysis import SheetAnalysis, analyze_sheet

@@ -1,5 +1,3 @@
-# Semantics derived from onyx/indexing/indexing_pipeline.py (get_docs_to_update,
-# index_doc_batch_prepare) and onyx/indexing/adapters/document_indexing_adapter.py.
 """A `DocumentStore` in a dict.
 
 Good enough for tests, notebooks, and single-process deployments that re-ingest

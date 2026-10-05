@@ -1,4 +1,3 @@
-# Derived from onyx/prompts/contextual_retrieval.py.
 """Re-export of the contextual-RAG prompts, so every prompt is findable here.
 
 The strings themselves live in `brain.ingest.prompts`, for the same reason the

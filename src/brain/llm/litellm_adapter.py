@@ -1,5 +1,3 @@
-# Derived from onyx/llm/multi_llm.py (LitellmLLM.invoke / .stream and its
-# message-dict conversion) and onyx/llm/model_response.py.
 """The one file that knows litellm exists.
 
 Everything else in brain talks to the `LLM` Protocol: two methods over
@@ -10,12 +8,12 @@ place without the answer loop, the retrieval flows, or the tests noticing —
 that is the whole reason the conversion lives here rather than being spread
 across call sites.
 
-What that costs is this file: every provider quirk Onyx learned the hard way
-has to be reproduced somewhere, and somewhere is here. What it buys is that the
+What that costs is this file: every provider quirk learned the hard way has
+to be reproduced somewhere, and somewhere is here. What it buys is that the
 list of quirks is finite, local, and swappable.
 
-Stripped from Onyx's version: the retry ladder, cost tracking, braintrust
-tracing, prompt caching, tenant plumbing, and the per-call HTTP client pool.
+Deliberately left out: a retry ladder, cost tracking, braintrust tracing,
+prompt caching, tenant plumbing, and a per-call HTTP client pool.
 Kept: the message-dict conversion, the response conversion, and the Vertex
 `stream_options` quirk, which is a wrong answer rather than a slow one.
 """
@@ -56,8 +54,8 @@ _INSTALL_HINT = (
 # forward the unknown key to the model verbatim instead of ignoring it.
 _THINKING_BLOCK_PROVIDERS = frozenset({"anthropic", "bedrock", "bedrock_converse", "vertex_ai"})
 
-# Vertex-hosted Anthropic models that reject `stream_options` outright. Onyx
-# keeps this list because the 400 costs a full round trip; `_open_stream` below
+# Vertex-hosted Anthropic models that reject `stream_options` outright. The
+# list exists because the 400 costs a full round trip; `_open_stream` below
 # still catches the rejection for a model this list has not heard of yet.
 _VERTEX_MODELS_REJECTING_STREAM_OPTIONS = (
     "claude-opus-4-5",
