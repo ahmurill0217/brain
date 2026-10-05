@@ -25,8 +25,10 @@ class IngestResult(BaseModel):
     # Documents that survived filtering. Excludes anything dropped as empty or
     # oversized; those oversized ones show up in `failures`.
     total_documents: int = 0
-    # Documents the dedupe gates found unchanged. Not touched, not a failure.
+    # Documents the dedupe gates found unchanged. Not re-embedded, not a failure.
     skipped_documents: int = 0
+    # Of the skipped, those whose permissions changed and were patched in place.
+    access_updated_documents: int = 0
     # Documents whose chunks reached the index on this run.
     indexed_documents: int = 0
     # Of those, the ones the index had never seen before.

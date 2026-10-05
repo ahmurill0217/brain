@@ -117,8 +117,13 @@ Endpoints: `/v1/ingest`, `/v1/extract`, `/v1/documents/delete`, `/v1/search`,
 **Documents are public by default.** A `Document` with no `external_access` is
 visible to every caller. If your corpus is not uniformly
 readable, set `BRAIN_DEFAULT_DOCUMENT_PUBLIC=false` and supply permissions at
-ingest. Access is enforced at query time from strings stored on each chunk, so a
-document indexed with the wrong permissions stays wrong until it is re-indexed.
+ingest. Access is enforced at query time from strings stored on each chunk.
+
+**Permission changes take effect on re-ingest.** Ingesting a document again
+with new `external_access` updates who can see it, even when its content is
+unchanged and it is otherwise skipped: the access strings on its chunks are
+patched in place, without re-embedding. A source integration therefore has to
+re-send a document whenever its sharing changes, not only when it is edited.
 
 **Re-ingest is cheap, and that cuts both ways.** Two gates skip unchanged
 documents: a timestamp, then a content hash. Both compare a document to itself,

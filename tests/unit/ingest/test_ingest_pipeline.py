@@ -28,6 +28,7 @@ from brain.index.fake import FakeDocumentIndex
 from brain.ingest import pipeline as pipeline_module
 from brain.ingest import process_image_sections
 from brain.ingest.pipeline import IngestPipeline
+from brain.models.acl import ExternalAccess
 from brain.models.chunks import Embedding
 from brain.models.document import Document, ImageSection, TextSection
 from brain.store.memory import InMemoryDocumentStore
@@ -399,3 +400,92 @@ class TestDelete:
         assert deleted.deleted_documents == 0
         assert [f.document_id for f in deleted.failures] == ["doc-a"]
         assert "doc-a" in store.get_records(["doc-a"])
+
+
+class TestPermissionOnlyChanges:
+    """The dedupe gates compare content, so a re-ingest that changes only who
+    may see a document skips re-indexing. The new access must still reach the
+    index, or a revoked user keeps finding the document."""
+
+    ALICE_AND_BOB = ExternalAccess(external_user_emails={"alice@ex.test", "bob@ex.test"})
+    ALICE_ONLY = ExternalAccess(external_user_emails={"alice@ex.test"})
+
+    @staticmethod
+    def with_access(doc: Document, access: ExternalAccess | None) -> Document:
+        return doc.model_copy(update={"external_access": access})
+
+    @staticmethod
+    def chunk_access(index: FakeDocumentIndex, doc_id: str) -> set[tuple[bool, tuple[str, ...]]]:
+        return {
+            (chunk.is_public, tuple(sorted(chunk.access_control_list)))
+            for chunk in index.chunks[doc_id].values()
+        }
+
+    @pytest.mark.parametrize("updated_at", [None, JAN_1], ids=["hash-gate", "timestamp-gate"])
+    def test_a_revocation_is_patched_without_re_embedding(
+        self, ingest_settings: BrainSettings, updated_at: datetime | None
+    ) -> None:
+        embedder = FakeEmbedder(dim=8)
+        ingest, store, index = build_pipeline(ingest_settings, embedder=embedder)
+        doc = make_doc(updated_at=updated_at)
+        ingest.run([self.with_access(doc, self.ALICE_AND_BOB)])
+        embeds_before = len(embedder.calls)
+
+        result = ingest.run([self.with_access(doc, self.ALICE_ONLY)])
+
+        assert (result.skipped_documents, result.access_updated_documents) == (1, 1)
+        assert result.indexed_documents == 0
+        assert len(embedder.calls) == embeds_before
+        assert self.chunk_access(index, "doc-1") == {(False, ("user_email:alice@ex.test",))}
+        assert store.get_records(["doc-1"])["doc-1"].external_access == self.ALICE_ONLY
+
+    def test_making_a_document_public_is_patched(self, ingest_settings: BrainSettings) -> None:
+        ingest, _, index = build_pipeline(ingest_settings)
+        doc = make_doc(updated_at=None)
+        ingest.run([self.with_access(doc, self.ALICE_ONLY)])
+
+        result = ingest.run([self.with_access(doc, ExternalAccess.public())])
+
+        assert result.access_updated_documents == 1
+        assert {is_public for is_public, _ in self.chunk_access(index, "doc-1")} == {True}
+
+    def test_unchanged_access_patches_nothing(
+        self, ingest_settings: BrainSettings, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ingest, _, index = build_pipeline(ingest_settings)
+        doc = self.with_access(make_doc(updated_at=None), self.ALICE_ONLY)
+        ingest.run([doc])
+        updates: list[object] = []
+        monkeypatch.setattr(index, "update", updates.append)
+
+        result = ingest.run([doc])
+
+        assert result.access_updated_documents == 0
+        assert updates == []
+
+    def test_a_failed_patch_is_reported_and_retried(
+        self, ingest_settings: BrainSettings, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The record keeps the old access until the index has the new one, so
+        the next run notices the difference again."""
+        ingest, store, index = build_pipeline(ingest_settings)
+        doc = make_doc(updated_at=None)
+        ingest.run([self.with_access(doc, self.ALICE_AND_BOB)])
+        real_update = index.update
+
+        def unavailable(request: object) -> None:
+            raise ConnectionError("index unavailable")
+
+        monkeypatch.setattr(index, "update", unavailable)
+        failed = ingest.run([self.with_access(doc, self.ALICE_ONLY)])
+
+        assert failed.access_updated_documents == 0
+        assert [f.document_id for f in failed.failures] == ["doc-1"]
+        assert "index unavailable" in failed.failures[0].failure_message
+        assert store.get_records(["doc-1"])["doc-1"].external_access == self.ALICE_AND_BOB
+
+        monkeypatch.setattr(index, "update", real_update)
+        retried = ingest.run([self.with_access(doc, self.ALICE_ONLY)])
+
+        assert retried.access_updated_documents == 1
+        assert self.chunk_access(index, "doc-1") == {(False, ("user_email:alice@ex.test",))}
