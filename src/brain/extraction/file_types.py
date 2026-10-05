@@ -6,7 +6,7 @@ derived from each other: a `.html` upload arrives as `text/html` from one client
 and `application/octet-stream` from another, and the extension is the tiebreak.
 
 No imports here on purpose, so the isolated child process can load this without
-dragging in pypdf or markitdown.
+dragging in pypdf or mammoth.
 """
 
 PRESENTATION_MIME_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
