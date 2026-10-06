@@ -13,8 +13,10 @@ relevant to it.
 
 This isolates retrieval. If the right passage is never retrieved, no answering
 model can cite it, so this is the foundation the answer quality rests on.
-Answer and citation quality are measured separately, by the end-to-end eval
-(see [Related](#related)).
+
+Answer and citation quality are measured separately: on scifact, in
+[Answers and citations](#answers-and-citations), and on our HR corpus (see
+[Related](#related)).
 
 Datasets come from BEIR, the standard public benchmark for retrieval. Using
 it means the numbers can be compared with published baselines, not only with
@@ -179,12 +181,89 @@ the sizing in [search-hosting.md](search-hosting.md).
 The September run used a model hosted on our own machine, so it had no
 per-token cost but took about 18 minutes of CPU time to index scifact.
 
+## Answers and citations
+
+The searches above stop at the ranked list. This run asks brain's full
+answer pipeline, as deployed, to judge 100 scifact claims:
+
+- Gemini 2.5 Pro answers; Gemini 2.5 Flash does query rewriting and section
+  selection.
+- The model decides what to search for.
+- It streams an answer with citations.
+
+Each claim was asked as:
+
+> Does the research support or contradict this claim? Start your answer with
+> exactly one of SUPPORTED, CONTRADICTED, or NOT ENOUGH EVIDENCE, then explain
+> with citations.
+
+**Why scifact:** most claims have exactly one abstract that experts judged as
+its evidence. That makes the core check strict: did brain cite that specific
+abstract, out of 5,183?
+
+Script: `benchmarks/answer_beir.py --limit 100`. Run on Oct 6 2026 against
+the `beir_scifact_gemini_embedding_001` index.
+
+| | Result |
+|---|---|
+| Answered without error | 100/100 |
+| Cited at least one document | 99/100 |
+| **Search retrieved the judged abstract** | **99/100** |
+| **Answer cited the judged abstract** | **88/100** |
+| Share of citations that are judged-relevant | 48.7% (a lower bound; see below) |
+| **Verdict matches the expert label** (65 claims with a label) | **61/65 (93.8%)** |
+| Verdicts on the 35 claims with no label | 15 supported, 10 contradicted, 10 not enough evidence |
+| Citations per answer, median | 3 |
+| Time to first answer text, median | 12.7 s (4 claims answered at once) |
+| Cost | $2.63 for 100 claims, $0.026 per claim |
+| Tokens (in / out) | Pro 454K / 141K; Flash 2.11M / 9K |
+
+### Reading the results
+
+**Retrieval is not the bottleneck.** The judged abstract reached the model
+for 99 of 100 claims. The one exception (#437) was a complex claim the
+search did not surface.
+
+**Most citation misses are a strict-grading artifact.** In 11 of the 12
+misses, the judged abstract was retrieved but the model cited other
+abstracts on the same topic. For example, it backed "a deficiency of vitamin
+B12 increases blood levels of homocysteine" with several studies, none of
+them the single one the experts judged.
+
+scifact judges only one abstract per claim, so these answers are likely
+well-supported but count as misses. For the same reason, the 48.7% precision
+is a floor: an unjudged citation is not necessarily irrelevant.
+
+**Verdicts are strong.** 61 of 65 matched the expert label. All 4 wrong
+verdicts cited the judged abstract: the model read the right evidence and
+judged it differently. At least one label is arguable (#208, "CHEK2 is not
+associated with breast cancer", labeled SUPPORTED).
+
+**One real defect.** For claim #53 the answer stopped mid-sentence: no
+citations and no error event. It read, in full:
+
+> SUPPORTED
+>
+> Research indicates that the expression of Aldehyde Dehydrogenase 1 (ALDH1),
+> a recognized marker for cancer stem cells, is linked to a poorer prognosis
+> in individuals with breast cancer
+
+The stream most likely ended early, either at the output-token limit or on
+Vertex's side. brain passed the truncated text on as a normal answer. It was
+1 in 100, but it is silent: a user would get an uncited, unfinished answer
+with no sign anything went wrong. Fix it before the Darwin integration.
+
+**Latency.** The median of 12.7 s to first text is higher than the HR eval's
+6.2 s. Four claims ran at once, and research-style claims draw longer
+reasoning and more searches than HR questions.
+
 ## Limits
 
 These benchmarks deliberately leave several things out:
 
-- **Answer and citation quality.** No LLM is involved here. See the
-  end-to-end eval below.
+- **Answer quality at scale.** The answer benchmark runs on scifact's 5K
+  abstracts, not on the 171K of trec-covid. trec-covid's questions have
+  hundreds of relevant papers each, so citing one proves little.
 - **Full production scale.** trec-covid is 171K documents. 500k is
   projected from it, not measured.
 - **Our own documents.** These are public scientific and medical texts, not
@@ -201,7 +280,10 @@ These benchmarks deliberately leave several things out:
   - Most recent run, on Oct 5 2026: about $0.023 per question, with a median
     of 6.2 s to the first answer text.
 - **Planned next.**
-  1. About 100 scifact questions through the full answer loop (~$2.50):
-     citation accuracy at scale.
-  2. An "old version" trap built on the HR corpus (< $0.50).
+  1. Fix the truncated-answer defect: detect an early stream end and report
+     it instead of passing it on as an answer.
+  2. Re-run the 100 claims against scifact and trec-covid merged into one
+     176K-document index (~$2.60, no new embedding): citation accuracy with
+     34× more distractors.
+  3. An "old version" trap built on the HR corpus (< $0.50).
 - **Search hosting.** See [search-hosting.md](search-hosting.md).
