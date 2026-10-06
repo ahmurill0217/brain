@@ -192,8 +192,14 @@ class BrainSettings(BaseSettings):
     stop_stream_pat: str | None = None
 
     # A Gemini model id, e.g. gemini-2.5-pro. Unset, answering is unavailable
-    # and the LLM-assisted retrieval steps switch off.
+    # and the LLM-assisted retrieval steps switch off (unless llm_fast_model
+    # is set).
     llm_model: str | None = None
+    # The model for everything except the answer itself: query expansion,
+    # section selection, image summaries, contextual RAG. Mechanical work that
+    # a cheaper, faster model does well, and that runs before the user sees
+    # anything. Unset, those use llm_model.
+    llm_fast_model: str | None = None
     # Some Gemini models are served only from "global". None uses vertex_location.
     llm_location: str | None = None
     llm_temperature: float = 0.0

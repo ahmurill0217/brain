@@ -160,6 +160,7 @@ The settings you will touch first:
 | `BRAIN_VERTEX_PROJECT` | your credentials' project | |
 | `BRAIN_VERTEX_LOCATION` | `us-central1` | |
 | `BRAIN_LLM_MODEL` | unset | A Gemini model id, e.g. `gemini-2.5-pro`. Unset turns answering off. |
+| `BRAIN_LLM_FAST_MODEL` | the answering model | Query expansion, section selection, image summaries. e.g. `gemini-2.5-flash`. |
 | `BRAIN_LLM_LOCATION` | the Vertex location | Some Gemini models are served only from `global`. |
 | `BRAIN_EMBEDDING_MODEL_NAME` | `gemini-embedding-001` | |
 | `BRAIN_EMBEDDING_DIM` | `768` | Up to 3072. Changing it requires a reindex. |

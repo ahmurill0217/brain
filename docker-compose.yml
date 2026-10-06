@@ -61,6 +61,7 @@ services:
       - BRAIN_VERTEX_LOCATION=${BRAIN_VERTEX_LOCATION:-us-central1}
       # Answering needs a Gemini model; ingest and search do not.
       - BRAIN_LLM_MODEL=${BRAIN_LLM_MODEL:-}
+      - BRAIN_LLM_FAST_MODEL=${BRAIN_LLM_FAST_MODEL:-}
       - BRAIN_LLM_LOCATION=${BRAIN_LLM_LOCATION:-}
       # Path inside the container to the credentials file. Mount the file
       # itself in a docker-compose.override.yml: a service account key in a
