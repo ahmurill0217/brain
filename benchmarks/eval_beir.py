@@ -85,9 +85,14 @@ def main() -> int:
     parser.add_argument("--split", default="test")
     parser.add_argument("--limit", type=int, default=None, help="evaluate only N queries")
     parser.add_argument("--hits", type=int, default=100, help="chunks retrieved per query")
+    parser.add_argument(
+        "--corpus",
+        default=None,
+        help="index to search instead of the dataset's own, e.g. scifact-trec-covid",
+    )
     args = parser.parse_args()
 
-    brain = brain_for(args.dataset)
+    brain = brain_for(args.corpus or args.dataset)
     require_stack(brain)
 
     queries = load_queries(args.dataset)
