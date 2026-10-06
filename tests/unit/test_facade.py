@@ -417,3 +417,99 @@ def test_revoking_access_takes_effect_on_re_ingest(settings: BrainSettings) -> N
     assert (result.skipped_documents, result.access_updated_documents) == (1, 1)
     assert not bob_finds_it()
     assert brain.search("band four", access=AccessScope(user_email="alice@ex.test")).search_docs
+
+
+def test_background_calls_go_to_the_fast_model(settings: BrainSettings) -> None:
+    """The main model writes the answer and nothing else: query expansion and
+    section selection run on the fast one."""
+    main = FakeLLM(
+        turns=[
+            ScriptedToolCall(name="internal_search", arguments={"queries": ["discount cap"]}),
+            ScriptedText(text="The cap is twenty percent [1]."),
+        ]
+    )
+    # No scripted turns: every call fails, which expansion and selection
+    # survive by design, and each attempt is still recorded.
+    fast = FakeLLM()
+    brain = Brain(
+        settings=settings.model_copy(
+            update={"query_expansion_enabled": True, "section_selection_enabled": True}
+        ),
+        document_store=InMemoryDocumentStore(),
+        embedder=FakeEmbedder(dim=settings.embedding_dim),
+        index=SearchableIndex(),
+        llm=main,
+        fast_llm=fast,
+        tokenizer=FakeTokenizer(),
+    )
+    brain.ingest(_docs())
+
+    events = list(brain.answer("what is the discount cap?", access=AccessScope(bypass=True)))
+
+    assert isinstance(events[-1], AnswerDone)
+    assert len(main.calls) == 2, "one search cycle and one answer cycle, nothing else"
+    assert fast.calls, "expansion and selection should have asked the fast model"
+    assert brain.searcher.llm is fast
+    assert brain.pipeline.llm is fast
+    assert brain.answer_loop is not None and brain.answer_loop.llm is main
+
+
+def test_without_a_fast_model_everything_uses_the_main_one(settings: BrainSettings) -> None:
+    main = FakeLLM()
+    brain = _brain(settings, llm=main)
+
+    assert brain.fast_llm is main
+    assert brain.searcher.llm is main
+    assert brain.pipeline.llm is main
+
+
+@pytest.mark.parametrize(
+    ("llm_model", "llm_fast_model", "expected_main", "expected_fast"),
+    [
+        ("gemini-2.5-pro", None, "gemini-2.5-pro", "gemini-2.5-pro"),
+        ("gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash"),
+        # Retrieval-only: no answering, but expansion and selection still run.
+        (None, "gemini-2.5-flash", None, "gemini-2.5-flash"),
+    ],
+)
+def test_from_settings_builds_each_model_slot(
+    monkeypatch: pytest.MonkeyPatch,
+    settings: BrainSettings,
+    llm_model: str | None,
+    llm_fast_model: str | None,
+    expected_main: str | None,
+    expected_fast: str | None,
+) -> None:
+    from tests.conftest import FakeCredentials
+
+    monkeypatch.setattr("google.auth.default", lambda scopes: (FakeCredentials(), "adc-project"))
+    monkeypatch.setattr("brain.facade.get_tokenizer", lambda encoding: FakeTokenizer())
+    configured = settings.model_copy(
+        update={"llm_model": llm_model, "llm_fast_model": llm_fast_model}
+    )
+
+    brain = Brain.from_settings(configured, document_store=InMemoryDocumentStore())
+
+    def name(llm: object) -> str | None:
+        return None if llm is None else llm.config.model_name  # type: ignore[attr-defined]
+
+    assert (name(brain.llm), name(brain.fast_llm)) == (expected_main, expected_fast)
+    assert (brain.answer_loop is not None) is (expected_main is not None)
+
+
+def test_an_explicit_fast_model_wins_over_settings(
+    monkeypatch: pytest.MonkeyPatch, settings: BrainSettings
+) -> None:
+    from tests.conftest import FakeCredentials
+
+    monkeypatch.setattr("google.auth.default", lambda scopes: (FakeCredentials(), "adc-project"))
+    monkeypatch.setattr("brain.facade.get_tokenizer", lambda encoding: FakeTokenizer())
+    mine = FakeLLM()
+
+    brain = Brain.from_settings(
+        settings.model_copy(update={"llm_fast_model": "gemini-2.5-flash"}),
+        fast_llm=mine,
+        document_store=InMemoryDocumentStore(),
+    )
+
+    assert brain.fast_llm is mine

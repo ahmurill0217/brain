@@ -13,6 +13,11 @@ never touches `from_settings`.
 The LLM is optional throughout. Without one, ingest drops image summaries and
 contextual RAG, search skips its three LLM steps, and `answer` raises — so a
 deployment that only needs retrieval never has to choose a Gemini model.
+
+There are two model slots. `llm` writes answers. `fast_llm` does everything
+else (query expansion, section selection, image summaries, contextual RAG),
+which is mechanical work worth giving to a cheaper, faster model; left unset,
+it is the same model as `llm`.
 """
 
 from __future__ import annotations
@@ -75,6 +80,7 @@ class Brain:
         embedder: Embedder,
         index: DocumentIndex,
         llm: LLM | None = None,
+        fast_llm: LLM | None = None,
         blob_reader: BlobReader | None = None,
         tokenizer: BaseTokenizer | None = None,
     ) -> None:
@@ -83,6 +89,7 @@ class Brain:
         self.embedder = embedder
         self.index = index
         self.llm = llm
+        self.fast_llm = fast_llm if fast_llm is not None else llm
         self.blob_reader = blob_reader
 
         self.tokenizer = tokenizer or get_tokenizer(settings.tokenizer_encoding)
@@ -100,10 +107,10 @@ class Brain:
             embedder,
             index,
             settings,
-            llm=llm,
+            llm=self.fast_llm,
             blob_reader=blob_reader,
         )
-        self.searcher = Searcher(index, embedder, settings, llm=llm)
+        self.searcher = Searcher(index, embedder, settings, llm=self.fast_llm)
         self.answer_loop = AnswerLoop(self.searcher, llm, settings) if llm else None
 
     @classmethod
@@ -112,13 +119,15 @@ class Brain:
         settings: BrainSettings | None = None,
         *,
         llm: LLM | None = None,
+        fast_llm: LLM | None = None,
         document_store: DocumentStore | None = None,
         blob_reader: BlobReader | None = None,
     ) -> Brain:
         """Build a Brain on the real backends named in `settings`.
 
         Anything passed explicitly wins, so a host can keep its own store or
-        LLM and still let this pick the rest.
+        LLM and still let this pick the rest. The fast model comes from
+        `fast_llm`, then `llm_fast_model`, then whatever `llm` resolved to.
         """
         settings = settings or get_settings()
 
@@ -133,12 +142,17 @@ class Brain:
         # refresh, one connection pool.
         vertex = VertexClient(settings.vertex_project, settings.vertex_location)
         tokenizer = get_tokenizer(settings.tokenizer_encoding)
+        if llm is None:
+            llm = _build_llm(settings, vertex, settings.llm_model)
+        if fast_llm is None and settings.llm_fast_model:
+            fast_llm = _build_llm(settings, vertex, settings.llm_fast_model)
         return cls(
             settings=settings,
             document_store=document_store or _build_document_store(settings),
             embedder=VertexEmbedder(vertex, settings, tokenizer),
             index=OpenSearchDocumentIndex(settings),
-            llm=llm if llm is not None else _build_llm(settings, vertex),
+            llm=llm,
+            fast_llm=fast_llm,
             blob_reader=blob_reader,
             tokenizer=tokenizer,
         )
@@ -247,9 +261,8 @@ class Brain:
             metadata=metadata,
             external_access=external_access,
             settings=self.settings,
-            # Images are summarized by the same model that answers. Without one
-            # they index as their filename and alt text.
-            image_summarizer=self.llm if self.settings.image_summarization_enabled else None,
+            # Without a model, images index as their filename and alt text.
+            image_summarizer=self.fast_llm if self.settings.image_summarization_enabled else None,
         )
 
 
@@ -262,14 +275,16 @@ def _build_document_store(settings: BrainSettings) -> DocumentStore:
     return SQLiteDocumentStore(settings.document_store_url)
 
 
-def _build_llm(settings: BrainSettings, vertex: VertexClient) -> LLM | None:
-    """The configured Gemini model, or None when none is configured.
+def _build_llm(
+    settings: BrainSettings, vertex: VertexClient, model_name: str | None
+) -> LLM | None:
+    """A Gemini model, or None when none is configured.
 
     No model is survivable: ingest and search still work, and `answer`
     explains itself when it is called. Failing to start instead would take a
     working retrieval deployment down over a feature it does not use.
     """
-    if not settings.llm_model:
+    if not model_name:
         logger.info("No LLM configured (BRAIN_LLM_MODEL); answering is unavailable.")
         return None
 
@@ -278,7 +293,7 @@ def _build_llm(settings: BrainSettings, vertex: VertexClient) -> LLM | None:
     return VertexGeminiLLM(
         vertex,
         LLMConfig(
-            model_name=settings.llm_model,
+            model_name=model_name,
             temperature=settings.llm_temperature,
             max_input_tokens=settings.llm_max_input_tokens,
         ),
