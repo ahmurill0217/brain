@@ -325,6 +325,88 @@ failure. For company documents, where a question usually has one
 authoritative source, this is where an outdated or near-duplicate document
 would do damage. That makes the old-version trap the remaining test.
 
+## Outdated document versions
+
+Company drives are full of superseded copies: last year's benefits guide, an
+archived policy, a "Copy of" a document someone edited later. None of the
+public datasets contain them. This test puts outdated copies next to the
+current documents and asks the questions whose answers changed.
+
+**Setup.** The real 7-document HR corpus, plus outdated copies of 4 of its
+documents under an `archive/` folder:
+
+- The copies carry older figures.
+- Their modified date is June 2023; the current documents are dated
+  September 2025.
+- brain shows that date to the model as each result's `updated_at`, the way
+  Drive's own modified time would arrive.
+
+The corpus, the copies, and the eval script stay out of git, because the
+documents are real HR material.
+
+| Question | Current figure | Outdated copy |
+|---|---|---|
+| #1 Opt-out payment, dependent tier | $83.34 per pay period ($2,000 a year) | $70.84 ($1,700) |
+| #3 HRA, employee + dependents | $8,000 | $6,000 |
+| #4 Medical FSA limit / rollover | $3,300 / $660 | $3,050 / $610 |
+| #8 Fitness reimbursement | $150 | $100 |
+| #10 401(k) auto-enrollment rate | 4% | 3% |
+
+Two variants, run on Oct 6 2026:
+
+- **Same name.** The outdated copy has the same title as the current one
+  (`archive/Flex Medical Benefits`). Only its date, and any year printed in
+  its text, tell them apart. This is the hard case.
+- **"Copy of".** The outdated copy is named `Copy of <title>`, as Drive names
+  a duplicate.
+
+### Results
+
+| | Same name (all 13 questions) | "Copy of" (the 5 trapped questions) |
+|---|---|---|
+| **Stated the current figure as the answer** | **5/5** trapped questions | **5/5** |
+| **Presented an outdated figure as current** | **0/5** | **0/5** |
+| Also mentioned the outdated figure, labeled as previous | 2/5 (#4, #10) | 4/5 (#3, #4, #8, #10) |
+| Cited the outdated copy anywhere in the answer | 6/13 | 4/5 |
+| Other 8 questions (unchanged answers) | All correct | Not run |
+| Cost | $0.32 | $0.12 |
+
+**The model always answered with the current figure.** When it also
+mentioned the old one, it labeled it as history. Two examples:
+
+> "...$8,000 to the Health Reimbursement Arrangement ... This is an increase
+> from the previous contribution of $6,000"
+
+> "...a previous plan document from June 2023 mentioned a 3%
+> auto-enrollment rate"
+
+It told the versions apart using the dates brain passes along. The Wellbeing
+copy has no year in its text, so its date was the only signal, and the model
+still treated it as older.
+
+**The automatic grader is stricter than the behavior deserves.** It fails
+any answer that cites an archived copy or mentions an old figure at all. By
+that measure the same-name run passed 7/13 and the "Copy of" run 1/5. Reading
+every flagged answer, none gave a user a wrong current figure. The flags
+were answers adding the old figure as context, or citing the archived copy
+next to the current one when both said the same thing (#2, #6, #7, #9).
+
+### What this means
+
+- **brain resolves conflicting versions correctly when dates are right.**
+  Showing `updated_at` to the model is what makes this work, so Darwin's
+  source adapters must pass each source's real modified time as
+  `doc_updated_at`. The eval did not set dates before this test.
+- **It depends on dates being right.** This test did not cover an outdated
+  copy with a newer date, such as an old file re-saved last week. Nothing in
+  brain could tell that apart.
+- **Users will see archived documents in the sources.** In 10 of 18 answers,
+  the outdated copy was cited, usually as context. That is honest, but noisy.
+  The cleanest fix is upstream: Darwin's adapters should skip archive
+  folders, or tag superseded documents so a search filter can exclude them.
+  Ranking newer documents higher in brain itself is another option. It is
+  deliberately not done today, and it would need its own benchmark.
+
 ## Limits
 
 These benchmarks deliberately leave several things out:
@@ -334,9 +416,9 @@ These benchmarks deliberately leave several things out:
   precision there count possibly-good citations as misses.
 - **Full production scale.** trec-covid is 171K documents. 500k is
   projected from it, not measured.
-- **Our own documents.** These are public scientific and medical texts, not
-  Darwin documents. They also contain none of the near-duplicate or outdated
-  versions that real company documents often have.
+- **Our own documents.** Apart from the HR corpus, these are public
+  scientific and medical texts, not Darwin documents. Outdated versions are
+  tested only on the 7-document HR corpus, with correct dates.
 - **Access control.** Every document is public here. Permission filtering is
   covered by brain's unit and OpenSearch integration tests instead.
 
@@ -350,5 +432,9 @@ These benchmarks deliberately leave several things out:
 - **Done.** The truncated-answer defect is fixed: an answer the model stops
   early now ends in an error that says so (verified: 0 of 100 in the 176K
   run).
-- **Planned next.** An "old version" trap built on the HR corpus (< $0.50).
+- **Done.** The old-version trap (see
+  [Outdated document versions](#outdated-document-versions)).
+- **Possible next.** An outdated copy with a newer modified date than the
+  current document (~$0.30). It would measure how much brain relies on
+  dates being right.
 - **Search hosting.** See [search-hosting.md](search-hosting.md).
