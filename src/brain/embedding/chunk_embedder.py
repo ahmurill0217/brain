@@ -9,8 +9,8 @@ Three things make this more than a map over `embedder.embed`:
     `chunk.content`, and it has to be reassembled the same way at query time
   - mini-chunks are flattened into the same flat request, then split back out by
     position, so multipass indexing costs one round trip rather than two
-  - titles repeat across every chunk of a document, so they are deduplicated,
-    embedded once, and reattached
+  - when the title vector is in use, titles repeat across every chunk of a
+    document, so they are deduplicated, embedded once, and reattached
 """
 
 from __future__ import annotations
@@ -31,8 +31,18 @@ logger = logging.getLogger(__name__)
 _FAILURE_RETRY_DELAY_S = 2.0
 
 
-def embed_chunks(chunks: list[DocAwareChunk], embedder: Embedder) -> list[IndexChunk]:
-    """Attach embeddings to every chunk, in one flat request where possible."""
+def embed_chunks(
+    chunks: list[DocAwareChunk],
+    embedder: Embedder,
+    *,
+    embed_titles: bool = False,
+) -> list[IndexChunk]:
+    """Attach embeddings to every chunk, in one flat request where possible.
+
+    `embed_titles` also builds each document's title vector. Only search's
+    title-and-content mode reads it (`BrainSettings.uses_title_vector`), so
+    otherwise it would be storage nobody queries.
+    """
     flat_chunk_texts: list[str] = []
     large_chunks_present = False
 
@@ -72,7 +82,7 @@ def embed_chunks(chunks: list[DocAwareChunk], embedder: Embedder) -> list[IndexC
         for title in dict.fromkeys(
             chunk.source_document.get_title_for_document_index() for chunk in chunks
         )
-        if title
+        if title and embed_titles
     ]
     title_embeddings: dict[str, Embedding] = {}
     if titles:
@@ -86,8 +96,9 @@ def embed_chunks(chunks: list[DocAwareChunk], embedder: Embedder) -> list[IndexC
         chunk_embeddings = embeddings[offset : offset + num_embeddings]
         offset += num_embeddings
 
-        # A document with no title leaves title_embedding null, which simply
-        # removes the title vector from that chunk's score.
+        # A document with no title (or titles not embedded) leaves
+        # title_embedding null, which simply removes the title vector from
+        # that chunk's score.
         title = chunk.source_document.get_title_for_document_index()
 
         # model_construct skips re-validation: these fields were validated when
@@ -109,6 +120,8 @@ def embed_chunks(chunks: list[DocAwareChunk], embedder: Embedder) -> list[IndexC
 def embed_chunks_with_failure_handling(
     chunks: list[DocAwareChunk],
     embedder: Embedder,
+    *,
+    embed_titles: bool = False,
 ) -> tuple[list[IndexChunk], list[DocumentFailure]]:
     """Embed everything at once; on failure, isolate the bad document.
 
@@ -118,7 +131,7 @@ def embed_chunks_with_failure_handling(
     first, document-by-document only after it breaks.
     """
     try:
-        return embed_chunks(chunks, embedder), []
+        return embed_chunks(chunks, embedder, embed_titles=embed_titles), []
     except StopSignal:
         raise
     except Exception:
@@ -133,7 +146,7 @@ def embed_chunks_with_failure_handling(
     failures: list[DocumentFailure] = []
     for doc_id, doc_chunks in chunks_by_doc.items():
         try:
-            embedded_chunks.extend(embed_chunks(doc_chunks, embedder))
+            embedded_chunks.extend(embed_chunks(doc_chunks, embedder, embed_titles=embed_titles))
         except StopSignal:
             raise
         except Exception as exc:

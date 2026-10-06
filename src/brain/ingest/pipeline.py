@@ -476,7 +476,9 @@ class IngestPipeline:
                 continue
 
             embedded, embedding_failures = embed_chunks_with_failure_handling(
-                batch, self.embedder
+                batch,
+                self.embedder,
+                embed_titles=self.settings.uses_title_vector(),
             )
             failed_doc_ids.update(failure.document_id for failure in embedding_failures)
 

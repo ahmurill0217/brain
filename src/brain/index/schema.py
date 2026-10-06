@@ -163,7 +163,8 @@ class DocumentChunkWithoutVectors(BaseModel):
     # colliding.
     max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE
 
-    # Either both of title and title_vector are set, or neither is.
+    # Searched as text in the keyword clause. title_vector is only set when
+    # search uses it, and never without a title.
     title: str | None = None
     content: str
 
@@ -260,11 +261,10 @@ class DocumentChunk(DocumentChunkWithoutVectors):
         )
 
     @model_validator(mode="after")
-    def check_title_and_title_vector_are_consistent(self) -> Self:
-        """A title with no vector is dead weight; a vector with no title is a
-        knn hit that cannot be explained. Neither is ever intentional."""
-        if self.title is not None and self.title_vector is None:
-            raise ValueError("Title vector must not be None if title is not None.")
+    def check_title_vector_has_a_title(self) -> Self:
+        """A vector with no title is a knn hit that cannot be explained. A
+        title with no vector is normal: the vector is only built when search
+        reads it (`BrainSettings.uses_title_vector`)."""
         if self.title_vector is not None and self.title is None:
             raise ValueError("Title must not be None if title vector is not None.")
         return self
