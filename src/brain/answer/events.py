@@ -95,6 +95,10 @@ class AnswerDone(BaseModel):
 class AnswerError(BaseModel):
     """The run failed. Always the last event, and it replaces `AnswerDone`.
 
+    This includes an answer the model stopped writing early (an output limit,
+    a content filter, a dropped stream). Its text has already streamed, so a
+    client should mark what it showed as incomplete rather than discard it.
+
     The loop yields this instead of raising: a caller iterating a generator over
     an SSE connection has already sent a 200, and an exception at that point
     reaches the client as a truncated stream with no explanation.

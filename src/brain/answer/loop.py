@@ -191,7 +191,7 @@ class AnswerLoop:
                         )
                     )
 
-                text, tool_calls, usage = yield from self._stream_cycle(
+                text, tool_calls, usage, finish_reason = yield from self._stream_cycle(
                     request,
                     tools=tools,
                     tool_choice=tool_choice,
@@ -204,6 +204,16 @@ class AnswerLoop:
 
                 if not tool_calls:
                     yield from _flush(processor)
+                    if finish_reason != "stop":
+                        # The text so far has already streamed, so it cannot be
+                        # taken back; what matters is that the client is told
+                        # it is unfinished instead of rendering it as an answer.
+                        logger.warning(
+                            "Answer stream ended without finishing: finish_reason=%r",
+                            finish_reason,
+                        )
+                        yield AnswerError(message=_cut_off_message(finish_reason))
+                        return
                     yield AnswerDone(
                         cited_documents=processor.get_cited_documents(), usage=total_usage
                     )
@@ -247,10 +257,12 @@ class AnswerLoop:
         tool_choice: ToolChoiceOption,
         processor: DynamicCitationProcessor,
         reasoning_effort: ReasoningEffort,
-    ) -> Generator[AnswerEvent, None, tuple[str, list[ToolCall], Usage | None]]:
+    ) -> Generator[AnswerEvent, None, tuple[str, list[ToolCall], Usage | None, str | None]]:
         """Stream one LLM call, emitting its text as it arrives.
 
-        Returns (raw text, tool calls, usage). The text is the model's own
+        Returns (raw text, tool calls, usage, finish reason). The finish reason
+        is None when the stream ended without one, which is itself a sign it was
+        cut off. The text is the model's own
         output, not what the citation processor emitted: it goes back to the
         provider as the assistant turn, and rewriting `[1]` to `[[1]](url)` in
         the history would teach the model to write links it was told not to.
@@ -258,6 +270,7 @@ class AnswerLoop:
         fragments: dict[int, ToolCallDelta] = {}
         raw_text: list[str] = []
         usage: Usage | None = None
+        finish_reason: str | None = None
 
         for chunk in self.llm.stream(
             request,
@@ -273,6 +286,8 @@ class AnswerLoop:
                 _absorb_fragment(fragments, fragment)
             if chunk.usage is not None:
                 usage = chunk.usage
+            if chunk.choice.finish_reason is not None:
+                finish_reason = chunk.choice.finish_reason
 
         tool_calls = [
             ToolCall(
@@ -284,7 +299,7 @@ class AnswerLoop:
             )
             for _, fragment in sorted(fragments.items())
         ]
-        return "".join(raw_text), tool_calls, usage
+        return "".join(raw_text), tool_calls, usage, finish_reason
 
     def _run_tool_call(
         self,
@@ -345,6 +360,19 @@ class AnswerLoop:
             citation_mapping_from_search_result(result.citation_mapping, result.search_docs)
         )
         return result.llm_context
+
+
+def _cut_off_message(finish_reason: str | None) -> str:
+    """Why an answer stopped early, in words a user can act on."""
+    if finish_reason == "length":
+        why = "it reached the model's output limit"
+    elif finish_reason == "content_filter":
+        why = "the model's content filter stopped it"
+    elif finish_reason is None:
+        why = "the model's response ended unexpectedly"
+    else:
+        why = f"the model stopped early ({finish_reason})"
+    return f"The answer was cut off before it finished: {why}. Please try again."
 
 
 def _absorb_fragment(fragments: dict[int, ToolCallDelta], fragment: ToolCallDelta) -> None:

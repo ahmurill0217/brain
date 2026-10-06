@@ -40,6 +40,9 @@ class ScriptedText:
 
     text: str
     chunks: list[str] | None = None
+    # How the stream ends. "stop" is a normal finish; anything else, or None
+    # for no finish reason at all, simulates an answer cut off partway.
+    finish_reason: str | None = "stop"
 
     def stream_pieces(self) -> list[str]:
         # Default to one character at a time: the citation processor's hardest
@@ -164,7 +167,7 @@ class FakeLLM(LLM):
             for piece in turn.stream_pieces():
                 yield ModelResponseStream(choice=StreamingChoice(delta=Delta(content=piece)))
             yield ModelResponseStream(
-                choice=StreamingChoice(delta=Delta(), finish_reason="stop"),
+                choice=StreamingChoice(delta=Delta(), finish_reason=turn.finish_reason),
                 usage=Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2),
             )
             return

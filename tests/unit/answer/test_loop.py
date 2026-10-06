@@ -218,6 +218,37 @@ def test_a_provider_failure_becomes_an_event_not_an_exception(settings: BrainSet
     assert "provider exploded" in events[-1].message
 
 
+@pytest.mark.parametrize(
+    ("finish_reason", "why"),
+    [
+        ("length", "output limit"),
+        ("content_filter", "content filter"),
+        (None, "ended unexpectedly"),
+        ("malformed_function_call", "malformed_function_call"),
+    ],
+)
+def test_an_answer_cut_off_partway_is_reported_not_passed_off_as_done(
+    settings: BrainSettings, finish_reason: str | None, why: str
+) -> None:
+    """Seen in the scifact benchmark: an answer stopped mid-sentence, uncited,
+    and the loop called it done. Its text has already streamed and stays, but
+    the run must end in an error that says it is unfinished."""
+    llm = FakeLLM(
+        turns=[
+            ScriptedToolCall(name="internal_search", arguments={"queries": ["pricing"]}),
+            ScriptedText(text="Research indicates that the price", finish_reason=finish_reason),
+        ]
+    )
+    events = list(AnswerLoop(StubSearcher(), llm, settings).run("q", access=AccessScope()))
+
+    text = "".join(e.text for e in events if isinstance(e, AnswerDelta))
+    assert text == "Research indicates that the price"
+    assert not any(isinstance(e, AnswerDone) for e in events)
+    assert isinstance(events[-1], AnswerError)
+    assert "cut off" in events[-1].message
+    assert why in events[-1].message
+
+
 def test_the_search_receives_the_models_queries(settings: BrainSettings) -> None:
     """The model's query rewrite is what runs, not the raw user text."""
     searcher = StubSearcher()
