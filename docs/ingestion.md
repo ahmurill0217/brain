@@ -12,7 +12,11 @@ brain does not know or care where a document comes from. It ingests a list of
 - **id:** stable per source, e.g. `drive:<file id>` or `scout:<article id>`.
 - **sections:** the text, plus a link for each part so citations can point
   back to it.
-- **doc_updated_at:** when the source last changed it.
+- **doc_updated_at:** when the source last changed it. The answering model
+  sees it, and uses it to prefer a current document over an outdated copy
+  (see the old-version test in
+  [retrieval-benchmarks.md](retrieval-benchmarks.md#outdated-document-versions)),
+  so pass the source's real modified time, never the ingest time.
 - **external_access:** who may see it. Darwin's Teams, Departments and Tags
   map to brain group IDs.
 - **metadata:** optional, usable as search filters.
@@ -127,6 +131,16 @@ At 500k documents:
 - **Images:** image summarization is on by default, so each image in a
   document is one extra Flash call. Count the images in a sample before
   backfilling an image-heavy source.
+
+## Outdated copies
+
+Archive folders and "Copy of" duplicates reach brain unless an adapter keeps
+them out. In testing, the model always answered with the current figure.
+It still cited the outdated copy as context in about half its answers.
+
+Have each adapter skip archive folders and obvious duplicates. Where that
+isn't possible, tag superseded documents in `metadata`, so a search filter
+can exclude them.
 
 ## Open decisions
 
