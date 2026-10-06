@@ -67,13 +67,26 @@ def test_embeds_the_enriched_text_not_the_raw_content(
     assert result[0].content == "Test chunk"
     assert result[0].embeddings.mini_chunk_embeddings == []
 
-    content_call, title_call = fake_embedder.calls
+    # One request: the title rides inside the content text, and gets no vector
+    # of its own unless search uses one.
+    (content_call,) = fake_embedder.calls
     assert content_call[0] == [f"Title: {doc_summary}Test chunk{chunk_context}"]
     assert content_call[1] is EmbedTextType.PASSAGE
     assert content_call[2] is False
-    # The title is embedded separately so it can be scored as its own field.
+    assert result[0].title_embedding is None
+
+
+def test_titles_are_embedded_separately_when_asked(
+    fake_embedder: FakeEmbedder, make_chunk: ChunkFactory
+) -> None:
+    """The title-and-content search mode scores the title as its own field."""
+    result = embed_chunks([make_chunk()], fake_embedder, embed_titles=True)
+
+    _, title_call = fake_embedder.calls
     assert title_call[0] == ["Test Document"]
-    assert result[0].title_embedding is not None
+    assert title_call[1] is EmbedTextType.PASSAGE
+    expected = FakeEmbedder(dim=8).embed(["Test Document"], EmbedTextType.PASSAGE)
+    assert result[0].title_embedding == expected[0]
 
 
 def test_mini_chunks_are_flattened_into_one_request(
@@ -105,7 +118,7 @@ def test_repeated_titles_are_embedded_once(
     document = make_document("doc-1")
     chunks = [make_chunk(chunk_id=i, document=document) for i in range(5)]
 
-    result = embed_chunks(chunks, fake_embedder)
+    result = embed_chunks(chunks, fake_embedder, embed_titles=True)
 
     assert fake_embedder.calls[1][0] == ["Test Document"]
     # ...and every chunk still carries the vector.
@@ -122,7 +135,7 @@ def test_a_document_with_no_title_gets_no_title_embedding(
     that field out of the chunk's score."""
     chunks = [make_chunk(document=make_document("doc-1", title=""))]
 
-    result = embed_chunks(chunks, fake_embedder)
+    result = embed_chunks(chunks, fake_embedder, embed_titles=True)
 
     assert result[0].title_embedding is None
     assert len(fake_embedder.calls) == 1
@@ -164,12 +177,15 @@ def test_failure_handling_passes_a_clean_batch_straight_through(
 ) -> None:
     chunks = [make_chunk("doc-1", 0), make_chunk("doc-2", 1)]
 
-    embedded, failures = embed_chunks_with_failure_handling(chunks, fake_embedder)
+    embedded, failures = embed_chunks_with_failure_handling(
+        chunks, fake_embedder, embed_titles=True
+    )
 
     assert len(embedded) == 2
     assert failures == []
     # One pass over the batch (contents, then titles), not one per document.
     assert len(fake_embedder.calls) == 2
+    assert all(c.title_embedding is not None for c in embedded)
 
 
 def test_one_bad_document_does_not_sink_the_batch(

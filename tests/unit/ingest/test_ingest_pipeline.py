@@ -21,7 +21,7 @@ import pytest
 from tests.conftest import FakeTokenizer
 
 from brain.chunking.chunker import Chunker
-from brain.config import BrainSettings
+from brain.config import BrainSettings, HybridSubqueryConfig
 from brain.embedding.fake import FakeEmbedder
 from brain.embedding.protocol import EmbeddingError, EmbedTextType
 from brain.index.fake import FakeDocumentIndex
@@ -140,6 +140,27 @@ class TestHappyPath:
         assert all(chunk.boost == 7 for chunk in chunks), "boost must survive a re-index"
         # No external_access supplied and default_document_public is on.
         assert all(chunk.is_public for chunk in chunks)
+
+    @pytest.mark.parametrize(
+        ("mode", "builds_title_vector"),
+        [
+            (HybridSubqueryConfig.CONTENT_VECTOR_ONLY, False),
+            (HybridSubqueryConfig.TITLE_AND_CONTENT_VECTOR, True),
+        ],
+    )
+    def test_the_title_vector_is_built_only_when_search_reads_it(
+        self,
+        ingest_settings: BrainSettings,
+        mode: HybridSubqueryConfig,
+        builds_title_vector: bool,
+    ) -> None:
+        settings = ingest_settings.model_copy(update={"hybrid_subquery_config": mode})
+        ingest, _, index = build_pipeline(settings)
+
+        ingest.run([make_doc()])
+
+        chunks = list(index.chunks["doc-1"].values())
+        assert all((c.title_embedding is not None) is builds_title_vector for c in chunks)
 
     def test_reports_totals_across_a_mixed_batch(
         self, ingest_settings: BrainSettings

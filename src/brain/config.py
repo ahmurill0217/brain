@@ -211,13 +211,23 @@ class BrainSettings(BaseSettings):
     api_port: int = 8100
     api_key: str | None = None
 
+    def uses_title_vector(self) -> bool:
+        """Whether search reads the title vector, and so whether ingest builds it.
+
+        Off by default: the title already leads every chunk's embedded text and
+        is in the keyword field, so its own vector is only computed and stored
+        when this mode asks for it. Turning it on needs a forced re-ingest so
+        existing chunks get one.
+        """
+        return self.hybrid_subquery_config is HybridSubqueryConfig.TITLE_AND_CONTENT_VECTOR
+
     def hybrid_fusion_weights(self) -> list[float]:
         """Fusion weights, positionally matched to the subquery list.
 
         Kept next to the subquery choice so the two cannot drift apart. The
         OpenSearch normalization processor rejects weights that do not sum to 1.
         """
-        if self.hybrid_subquery_config is HybridSubqueryConfig.TITLE_AND_CONTENT_VECTOR:
+        if self.uses_title_vector():
             # Title is already included in the content text, so its own vector
             # gets only a small share.
             return [0.1, 0.45, 0.45]

@@ -109,10 +109,10 @@ def test_title_and_title_vector_may_both_be_none() -> None:
     assert _vector_chunk(None, None).title is None
 
 
-def test_title_without_vector_is_rejected() -> None:
-    """A title nobody embedded is dead weight in the index."""
-    with pytest.raises(ValueError, match="Title vector must not be None"):
-        _vector_chunk("A title", None)
+def test_title_without_vector_is_allowed() -> None:
+    """The default: the title is searched as text, and its vector is only
+    built when search reads it."""
+    assert _vector_chunk("A title", None).title_vector is None
 
 
 def test_vector_without_title_is_rejected() -> None:

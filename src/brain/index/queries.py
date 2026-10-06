@@ -21,7 +21,7 @@ import random
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from brain.config import BrainSettings, HybridNormalization, HybridSubqueryConfig
+from brain.config import BrainSettings, HybridNormalization
 from brain.constants import INDEX_SEPARATOR
 from brain.index.schema import (
     ACCESS_CONTROL_LIST_FIELD_NAME,
@@ -416,7 +416,7 @@ class DocumentQuery:
         )
         keyword_query = DocumentQuery._get_title_content_combined_keyword_search_query(query_text)
 
-        if settings.hybrid_subquery_config is HybridSubqueryConfig.TITLE_AND_CONTENT_VECTOR:
+        if settings.uses_title_vector():
             return [
                 DocumentQuery._get_title_vector_similarity_search_query(
                     query_vector, vector_candidates
