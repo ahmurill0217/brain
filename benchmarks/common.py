@@ -31,13 +31,16 @@ def _dotenv() -> dict[str, str]:
     return {k.strip(): v.strip() for k, v in pairs if not k.lstrip().startswith("#")}
 
 
-def settings_for(dataset: str) -> BrainSettings:
+def settings_for(dataset: str, *, answering: bool = False) -> BrainSettings:
     """Settings for one dataset's index.
 
     No LLM is configured on purpose. Query expansion and section selection
     both need one, so leaving it out is what makes this a measurement of
     retrieval rather than of retrieval plus a model's judgement. The two flags
     are also set explicitly, so the intent survives a model being set in .env.
+
+    `answering` keeps the models from .env and every LLM step at its default,
+    for the end-to-end answer benchmark: that one measures brain as deployed.
 
     The index and store are named after the embedding model. Vectors from two
     models are not comparable, and the store's dedupe would otherwise skip
@@ -51,12 +54,15 @@ def settings_for(dataset: str) -> BrainSettings:
         # These outlive this index and would be imposed on anything else
         # sharing the cluster, including the running brain_chunks index.
         "opensearch_set_cluster_settings": False,
-        "llm_model": None,
-        "llm_fast_model": None,
-        "query_expansion_enabled": False,
-        "section_selection_enabled": False,
         "image_summarization_enabled": False,
     }
+    if not answering:
+        overrides |= {
+            "llm_model": None,
+            "llm_fast_model": None,
+            "query_expansion_enabled": False,
+            "section_selection_enabled": False,
+        }
     # .env describes the compose network; from the host, use the mapped port.
     if "BRAIN_OPENSEARCH_PORT" not in os.environ and env.get("OPENSEARCH_HOST_PORT"):
         overrides["opensearch_port"] = int(env["OPENSEARCH_HOST_PORT"])
@@ -65,14 +71,14 @@ def settings_for(dataset: str) -> BrainSettings:
     return BrainSettings(**overrides)
 
 
-def brain_for(dataset: str) -> Brain:
+def brain_for(dataset: str, *, answering: bool = False) -> Brain:
     """A Brain against this dataset's index, with a store that survives runs.
 
     The store is on disk rather than in memory so a re-run of the indexer
     skips documents it has already embedded, and does not pay for them twice.
     """
     DATA.mkdir(parents=True, exist_ok=True)
-    settings = settings_for(dataset)
+    settings = settings_for(dataset, answering=answering)
     store = SQLiteDocumentStore(f"sqlite:///{DATA / f'{settings.opensearch_index_name}.db'}")
     return Brain.from_settings(settings, document_store=store)
 
