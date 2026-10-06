@@ -51,7 +51,9 @@ def load_qrels(dataset: str, split: str) -> dict[str, dict[str, int]]:
         for row in reader:
             if len(row) < 3:
                 continue
-            qrels[row[0]][row[1]] = int(row[2])
+            # A few judgements are negative (trec-covid has two). trec_eval,
+            # which BEIR scores with, treats them as plain non-relevant.
+            qrels[row[0]][row[1]] = max(int(row[2]), 0)
     return dict(qrels)
 
 
