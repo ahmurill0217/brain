@@ -257,13 +257,81 @@ with no sign anything went wrong. Fix it before the Darwin integration.
 6.2 s. Four claims ran at once, and research-style claims draw longer
 reasoning and more searches than HR questions.
 
+## Citations at 176K documents
+
+The same 100 claims, re-run against a much bigger haystack: scifact's 5,183
+abstracts plus trec-covid's 171,331 papers, merged into one 187,849-chunk
+index. The extra papers are biomedical too, so they are realistic distractors
+and sometimes plausible evidence.
+
+The merge copied the existing vectors server-side
+(`benchmarks/combine_indexes.py`), so it needed no new embedding. Run on Oct
+6 2026 with `answer_beir.py --corpus scifact-trec-covid`.
+
+**Search alone** (all 300 scifact questions, `eval_beir.py scifact --corpus
+scifact-trec-covid`):
+
+| | 5K documents | 176K documents |
+|---|---|---|
+| nDCG@10 | 0.8217 | 0.7572 |
+| Recall@10 | 0.9489 | 0.9136 |
+| Recall@100 | 0.9933 | 0.9783 |
+| Latency p50 / p95 | 259 / 396 ms | 318 / 437 ms |
+
+**Full answers** (100 claims):
+
+| | 5K documents | **176K documents** |
+|---|---|---|
+| Answered without error | 100/100 | 100/100 |
+| Search retrieved the judged abstract | 99/100 | **98/100** |
+| Answer cited the judged abstract | 88/100 | **83/100** |
+| Share of citations that are judged-relevant | 48.7% | 38.7% (lower bound) |
+| Verdict matches the expert label | 61/65 (93.8%) | **63/65 (96.9%)** |
+| Answers citing at least one trec-covid paper | — | 55/100 |
+| Time to first answer text, median | 12.7 s | 13.3 s |
+| Cost | $2.63 | $2.94 ($0.029 per claim) |
+
+### Reading the results
+
+**Retrieval barely moved.** With 34× more documents, the judged abstract
+still reached the model for 98 of 100 claims. Ranking slipped a few points
+(nDCG@10 0.82 to 0.76), but it stayed in the top 100 for 98% of questions.
+
+**The citation drop is the model citing distractors that may be relevant.**
+
+- **Lost:** 6 claims that cited the judged abstract on 5K did not on 176K
+  (#268, #312, #343, #384, #388, #410).
+- **Gained:** 1, #53, the claim truncated in the first run.
+- **What happened:** in 5 of the 6 losses, the judged abstract was retrieved,
+  but the model cited trec-covid papers on the same topic instead. Examples
+  are sequence-assembly papers for a sequence-assembly claim, and cardiology
+  papers for a diabetes and coronary-syndrome claim.
+- **Why it can't be graded:** those papers were never judged for scifact
+  claims, so whether they are good evidence is unknown. The same effect
+  explains the lower precision.
+
+**Conclusions held, and slightly improved.** Verdicts matched the experts
+63 of 65 times, up from 61. A bigger, noisier corpus did not mislead the
+model's judgement; it changed which studies it chose to cite.
+
+**The truncation fix held.** 0 of 100 answers were cut off or failed.
+Claim #53, truncated in the first run, finished normally with its citation.
+
+**Takeaway.** At 34× the corpus, brain still finds the right evidence
+(98/100) and reaches the right conclusion (97%). As the corpus grows, the
+model increasingly cites other plausible sources instead of the single
+judged one, which is a citation-choice effect rather than a retrieval
+failure. For company documents, where a question usually has one
+authoritative source, this is where an outdated or near-duplicate document
+would do damage. That makes the old-version trap the remaining test.
+
 ## Limits
 
 These benchmarks deliberately leave several things out:
 
-- **Answer quality at scale.** The answer benchmark runs on scifact's 5K
-  abstracts, not on the 171K of trec-covid. trec-covid's questions have
-  hundreds of relevant papers each, so citing one proves little.
+- **Judgements for distractors.** In the 176K run, trec-covid papers the
+  model cited were never judged for scifact claims. Citation hit and
+  precision there count possibly-good citations as misses.
 - **Full production scale.** trec-covid is 171K documents. 500k is
   projected from it, not measured.
 - **Our own documents.** These are public scientific and medical texts, not
@@ -279,11 +347,8 @@ These benchmarks deliberately leave several things out:
   - Passed 13/13 after each change since the move to Vertex.
   - Most recent run, on Oct 5 2026: about $0.023 per question, with a median
     of 6.2 s to the first answer text.
-- **Planned next.**
-  1. Fix the truncated-answer defect: detect an early stream end and report
-     it instead of passing it on as an answer.
-  2. Re-run the 100 claims against scifact and trec-covid merged into one
-     176K-document index (~$2.60, no new embedding): citation accuracy with
-     34× more distractors.
-  3. An "old version" trap built on the HR corpus (< $0.50).
+- **Done.** The truncated-answer defect is fixed: an answer the model stops
+  early now ends in an error that says so (verified: 0 of 100 in the 176K
+  run).
+- **Planned next.** An "old version" trap built on the HR corpus (< $0.50).
 - **Search hosting.** See [search-hosting.md](search-hosting.md).

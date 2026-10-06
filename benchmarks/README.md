@@ -20,6 +20,18 @@ uv run python benchmarks/index_beir.py scifact     # ~1–5 min, ~$0.25 of embed
 uv run python benchmarks/eval_beir.py scifact      # ~3 min, a few cents of query embeddings
 ```
 
+The answer benchmark runs the full pipeline (answer and fast models from
+`.env`) and is billed at about $0.03 per claim. To grade it against a bigger
+haystack, merge indexed datasets first; the merge copies vectors server-side
+and costs nothing:
+
+```bash
+uv run python benchmarks/answer_beir.py --limit 100                     # ~$2.60
+uv run python benchmarks/combine_indexes.py scifact trec-covid          # ~3 min, free
+uv run python benchmarks/eval_beir.py scifact --corpus scifact-trec-covid
+uv run python benchmarks/answer_beir.py --limit 100 --corpus scifact-trec-covid
+```
+
 Embeddings come from Vertex (gemini-embedding-001), with the project read from
 `.env`, so indexing is billed. The indexer prints an upper-bound cost before it
 embeds anything.

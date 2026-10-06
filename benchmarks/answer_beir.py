@@ -16,7 +16,9 @@ judge each claim, and checks what it cites against the human judgements:
   verdict accuracy    SUPPORTED or CONTRADICTED matches scifact's label, for
                       claims that have one
 
-Index the corpus first (index_beir.py scifact). Answering is billed: about
+Index the corpus first (index_beir.py scifact). `--corpus` points the
+answers at a bigger index holding scifact plus distractors, built with
+combine_indexes.py, while the claims and judgements stay scifact's. Answering is billed: about
 $0.02-0.03 per claim with the Pro answer model and the Flash fast model.
 A JSON report with every answer is written to benchmarks/data/results/.
 """
@@ -143,10 +145,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--limit", type=int, default=100, help="claims to run, in qrels order")
     parser.add_argument("--workers", type=int, default=4, help="claims answered at once")
+    parser.add_argument(
+        "--corpus",
+        default="scifact",
+        help="index to search, e.g. scifact-trec-covid from combine_indexes.py",
+    )
     args = parser.parse_args()
 
     install_usage_hooks()
-    brain = brain_for("scifact", answering=True)
+    brain = brain_for(args.corpus, answering=True)
     require_stack(brain)
     if brain.llm is None:
         raise SystemExit("BRAIN_LLM_MODEL is not set in .env; answering needs a model.")
@@ -182,7 +189,7 @@ def main() -> int:
     precisions = [r["precision"] for r in answered if r["precision"] is not None]
     firsts = [r["first_text_s"] for r in answered if r["first_text_s"]]
 
-    print(f"\nscifact answers  ({len(results)} claims in {elapsed:.0f}s)")
+    print(f"\nscifact answers on {args.corpus}  ({len(results)} claims in {elapsed:.0f}s)")
     print("-" * 58)
     print(f"  answered without error   {share([not r['errors'] for r in results])}")
     print(f"  cited something          {share([bool(r['cited']) for r in answered])}")
@@ -209,7 +216,7 @@ def main() -> int:
 
     out_dir = DATA / "results"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / f"scifact-answers-{datetime.now():%Y%m%d-%H%M%S}.json"
+    out = out_dir / f"{args.corpus}-answers-{datetime.now():%Y%m%d-%H%M%S}.json"
     out.write_text(json.dumps({"usage": dict(USAGE), "results": results}, indent=2))
     print(f"\nreport: {out}")
     return 0
