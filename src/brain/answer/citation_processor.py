@@ -122,6 +122,20 @@ class DynamicCitationProcessor:
         # group 2: '[1]', '[1, 2]', '[1,2,16]', etc. (also the unicode variants)
         self.citation_pattern = re.compile(r"([\[【［]{2}\d+[\]】］]{2})|([\[【［]\d+(?:, ?\d+)*[\]】］])")  # noqa: RUF001
 
+        # A doubled citation one closing bracket short: '[[1]'. Matched now,
+        # its inner '[1]' would render inside a stray pair of brackets.
+        self.half_closed_pattern = re.compile(r"[\[【［]{2}\d+[\]】］]$")  # noqa: RUF001
+
+        # A model that has seen rendered citations (in history, say) copies
+        # their syntax and writes '[1](url)'. brain renders the link itself, so
+        # a link target written straight after a citation is dropped. No spaces
+        # inside, which is what tells '(url)' from '(see above)'.
+        self.link_target_pattern = re.compile(r"\([^()\s]*\)")
+        self.partial_link_target_pattern = re.compile(r"\([^()\s]*$")
+        # Set once a citation is rendered, until the text after it shows
+        # whether a link target follows.
+        self.after_citation = False
+
     def update_citation_mapping(
         self,
         citation_mapping: CitationMapping,
@@ -220,6 +234,11 @@ class DynamicCitationProcessor:
                         # buffered segment must stay untouched.
                         self.curr_segment = parts[0] + "```plaintext" + "```".join(parts[1:])
 
+        # Wait for the rest of a link target, or a doubled citation's second
+        # closing bracket, before deciding what this text is.
+        if self._drop_echoed_link() or self.half_closed_pattern.search(self.curr_segment):
+            return
+
         # A citation is left alone if it sits inside a code block. That is
         # decided at the citation's own position, not at the end of the
         # segment: one token can carry a citation and then open a fence.
@@ -310,6 +329,10 @@ class DynamicCitationProcessor:
 
             # Whatever trails the last citation could start the next one.
             self.curr_segment = self.curr_segment[match_idx:]
+            # Markers are kept verbatim in KEEP_MARKERS, so their links are too.
+            self.after_citation = self.citation_mode != CitationMode.KEEP_MARKERS
+            if self._drop_echoed_link():
+                return
             self.non_citation_count = len(self.curr_segment)
 
         # Hold the segment back if it could still grow into a citation.
@@ -320,6 +343,26 @@ class DynamicCitationProcessor:
 
         if result:
             yield result
+
+    def _drop_echoed_link(self) -> bool:
+        """Remove a link target the model wrote straight after a citation.
+
+        Returns True when the segment has to be held: it is the start of a
+        link target whose closing parenthesis has not arrived yet.
+        """
+        if not self.after_citation or not self.curr_segment:
+            return False
+        self.after_citation = False
+
+        if not self.curr_segment.startswith("("):
+            return False
+        if match := self.link_target_pattern.match(self.curr_segment):
+            self.curr_segment = self.curr_segment[match.end() :]
+            return False
+        if self.partial_link_target_pattern.match(self.curr_segment):
+            self.after_citation = True
+            return True
+        return False
 
     def _process_citation(
         self, match: re.Match, has_leading_space: bool

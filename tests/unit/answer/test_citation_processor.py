@@ -193,6 +193,56 @@ def test_hyperlink_rendering(
     assert output == expected
 
 
+@pytest.mark.parametrize(
+    ("tokens", "expected"),
+    [
+        pytest.param(
+            ["Text [1](/api/doc1).", " More."], f"Text {LINK1}. More.", id="one-token"
+        ),
+        pytest.param(list("Text [1](/api/doc1)."), f"Text {LINK1}.", id="char-by-char"),
+        pytest.param(
+            list("Text [[1]](/api/doc1)."), f"Text {LINK1}.", id="doubled-char-by-char"
+        ),
+        pytest.param(
+            ["Text [", "1", "](", URL1, ") and [", "2", "](x)."],
+            f"Text {LINK1} and {LINK2}.",
+            id="split-across-tokens",
+        ),
+        pytest.param(["Text [", "1", "]("], f"Text {LINK1}(", id="unclosed-at-end"),
+    ],
+)
+def test_a_link_the_model_wrote_after_a_citation_is_dropped(
+    docs: CitationMapping, tokens: list[str | None], expected: str
+) -> None:
+    """A model that has seen rendered citations, in history, copies their
+    link syntax. brain renders the link itself, so the copy would show as
+    stray text after it."""
+    output, _ = process_tokens(processor_with(docs), tokens)
+
+    assert output == expected
+
+
+@pytest.mark.parametrize(
+    ("tokens", "expected"),
+    [
+        pytest.param(
+            ["Text [", "1", "] (see above)."], f"Text {LINK1} (see above).", id="space"
+        ),
+        pytest.param(
+            ["Text [", "1", "](see above)."],
+            f"Text {LINK1}(see above).",
+            id="not-a-link-target",
+        ),
+    ],
+)
+def test_text_in_parentheses_after_a_citation_is_kept(
+    docs: CitationMapping, tokens: list[str | None], expected: str
+) -> None:
+    output, _ = process_tokens(processor_with(docs), tokens)
+
+    assert output == expected
+
+
 @pytest.mark.parametrize("number", [0, 100, 9999])
 def test_any_mapped_number_renders(docs: CitationMapping, number: int) -> None:
     processor = DynamicCitationProcessor()
