@@ -127,6 +127,10 @@ class OpenSearchClient(AbstractContextManager):
             # working, so request bodies carry their own shorter timeout to get
             # partial results back instead.
             timeout=settings.opensearch_client_timeout_s,
+            # Hybrid search runs its subqueries in parallel. With urllib3's
+            # default of one pooled connection, every extra one is opened,
+            # used once, and discarded with a warning.
+            pool_maxsize=16,
         )
 
     def __exit__(self, *_: Any) -> None:
