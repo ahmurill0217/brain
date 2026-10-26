@@ -12,10 +12,23 @@ for vectors. There are no model weights in this repository.
 
 ## Status
 
-Verified end to end against OpenSearch with the earlier local embedding model.
-The move to Vertex is covered by unit tests against Vertex's documented request
-and response shapes, but has not yet been run against a real Vertex project.
-Not yet run against a production corpus, and not yet deployed anywhere.
+Runs end to end on Vertex AI and OpenSearch. Measured so far (details in
+[docs/retrieval-benchmarks.md](docs/retrieval-benchmarks.md)):
+
+- **Search:** beats keyword-only search on three public datasets, up to
+  171K documents (nDCG@10 0.82 / 0.41 / 0.85 against BM25's 0.67 / 0.33 /
+  0.66), with no ingest failures at that scale.
+- **Answers:** on 100 scientific claims against a 176K-document index, the
+  expert-judged evidence reached the model 98 times out of 100. The verdict
+  matched the experts on 63 of the 65 claims they labeled, at about $0.03 per
+  answer.
+- **Company documents:** a real 7-document HR corpus passes 13/13. With
+  outdated copies of its documents in the index, it answered with the current
+  figure every time.
+
+Not yet run against a Darwin corpus, and not yet deployed anywhere. Identity
+is not wired up: the API uses one shared key, so per-document permissions do
+not yet distinguish callers.
 
 | | |
 |---|---|
